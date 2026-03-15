@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AcadVault — College Academic Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ===== AUTH PAGES ===== -->
+<div id="auth-page" class="page active">
+  <div class="auth-split">
+    <div class="auth-hero">
+      <div class="auth-hero-content">
+        <div class="logo-mark">AV</div>
+        <h1 class="hero-title">AcadVault</h1>
+        <p class="hero-tagline">Where knowledge lives between semesters.</p>
+        <div class="hero-features">
+          <div class="feat-item"><span class="feat-dot"></span>Upload & organize study notes</div>
+          <div class="feat-item"><span class="feat-dot"></span>Filtered by branch & semester</div>
+          <div class="feat-item"><span class="feat-dot"></span>Section-level access control</div>
+          <div class="feat-item"><span class="feat-dot"></span>Cloudinary-powered file storage</div>
+        </div>
+        <div class="hero-deco">
+          <div class="deco-circle c1"></div>
+          <div class="deco-circle c2"></div>
+          <div class="deco-circle c3"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-panel">
+      <div class="auth-tabs">
+        <button class="tab-btn active" data-tab="login">Sign In</button>
+        <button class="tab-btn" data-tab="register">Register</button>
+      </div>
+
+      <!-- Login Form -->
+      <div id="login-form" class="auth-form active">
+        <h2>Welcome back</h2>
+        <p class="form-subtitle">Sign in to access your academic materials.</p>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="login-email" placeholder="you@college.edu" autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <div class="input-with-icon">
+            <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" />
+            <button class="toggle-pass" onclick="togglePass('login-password')">👁</button>
+          </div>
+        </div>
+        <div id="login-error" class="form-error hidden"></div>
+        <button class="btn-primary full" id="login-btn" onclick="handleLogin()">
+          <span>Sign In</span>
+          <div class="btn-loader hidden"></div>
+        </button>
+        <p class="form-link">No account? <a href="#" onclick="switchTab('register')">Register here</a></p>
+      </div>
+
+      <!-- Register Form -->
+      <div id="register-form" class="auth-form">
+        <h2>Create account</h2>
+        <p class="form-subtitle">Join your institution's academic portal.</p>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="reg-name" placeholder="Your full name" />
+          </div>
+          <div class="form-group">
+            <label>Role</label>
+            <select id="reg-role" onchange="toggleRoleFields()">
+              <option value="">Select role</option>
+              <option value="student">Student</option>
+              <option value="teacher">Teacher</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="reg-email" placeholder="you@college.edu" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <div class="input-with-icon">
+            <input type="password" id="reg-password" placeholder="Min 6 characters" />
+            <button class="toggle-pass" onclick="togglePass('reg-password')">👁</button>
+          </div>
+        </div>
+
+        <!-- Student fields -->
+        <div id="student-fields" class="role-fields hidden">
+          <div class="form-group">
+            <label>USN <span class="req">*</span></label>
+            <input type="text" id="reg-usn" placeholder="e.g. 1MS21CS001" style="text-transform:uppercase" />
+          </div>
+          <div class="form-row three">
+            <div class="form-group">
+              <label>Semester</label>
+              <select id="reg-semester">
+                <option value="">Sem</option>
+                <option value="1">1st</option>
+                <option value="2">2nd</option>
+                <option value="3">3rd</option>
+                <option value="4">4th</option>
+                <option value="5">5th</option>
+                <option value="6">6th</option>
+                <option value="7">7th</option>
+                <option value="8">8th</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Branch</label>
+              <select id="reg-branch">
+                <option value="">Branch</option>
+                <option value="CSE">CSE</option>
+                <option value="ECE">ECE</option>
+                <option value="ME">ME</option>
+                <option value="CE">CE</option>
+                <option value="EEE">EEE</option>
+                <option value="IT">IT</option>
+                <option value="AIDS">AIDS</option>
+                <option value="AIML">AIML</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Section</label>
+              <select id="reg-section">
+                <option value="">Sec</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Teacher fields -->
+        <div id="teacher-fields" class="role-fields hidden">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Department</label>
+              <select id="reg-dept">
+                <option value="GENERAL">General</option>
+                <option value="CSE">CSE</option>
+                <option value="ECE">ECE</option>
+                <option value="ME">ME</option>
+                <option value="CE">CE</option>
+                <option value="EEE">EEE</option>
+                <option value="IT">IT</option>
+                <option value="AIDS">AIDS</option>
+                <option value="AIML">AIML</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Designation</label>
+              <input type="text" id="reg-designation" placeholder="e.g. Assistant Professor" />
+            </div>
+          </div>
+        </div>
+
+        <div id="register-error" class="form-error hidden"></div>
+        <button class="btn-primary full" id="register-btn" onclick="handleRegister()">
+          <span>Create Account</span>
+          <div class="btn-loader hidden"></div>
+        </button>
+        <p class="form-link">Have an account? <a href="#" onclick="switchTab('login')">Sign in</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD PAGE ===== -->
+<div id="dashboard-page" class="page">
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-left">
+      <div class="nav-logo">AcadVault</div>
+    </div>
+    <div class="nav-center">
+      <button class="nav-btn active" data-view="dashboard" onclick="switchView('dashboard')">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-btn" data-view="notes" onclick="switchView('notes')">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+        Notes
+      </button>
+      <button class="nav-btn teacher-only" data-view="upload" onclick="switchView('upload')">
+        <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+        Upload
+      </button>
+      <button class="nav-btn teacher-only" data-view="my-notes" onclick="switchView('my-notes')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        My Notes
+      </button>
+      <button class="nav-btn teacher-only" data-view="marks-entry" onclick="switchView('marks-entry')">
+        <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Marks Entry
+      </button>
+      <button class="nav-btn teacher-only" data-view="class-report" onclick="switchView('class-report')">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Class Report
+      </button>
+      <button class="nav-btn student-only" data-view="performance" onclick="switchView('performance')">
+        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Performance
+      </button>
+    </div>
+    <div class="nav-right">
+      <div class="user-chip" id="user-chip">
+        <div class="user-avatar" id="nav-avatar">?</div>
+        <div class="user-info">
+          <span id="nav-name">User</span>
+          <span id="nav-role" class="role-badge">—</span>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="handleLogout()" title="Logout">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ===== DASHBOARD VIEW ===== -->
+  <div id="view-dashboard" class="view active">
+    <div class="view-container">
+      <div class="view-header">
+        <div>
+          <h1 id="dash-greeting">Good morning!</h1>
+          <p id="dash-subtitle">Here's your academic overview.</p>
+        </div>
+      </div>
+
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card primary" id="stat-main">
+          <div class="stat-icon">📚</div>
+          <div class="stat-info">
+            <div class="stat-num" id="stat-num-1">—</div>
+            <div class="stat-label" id="stat-label-1">Loading...</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📥</div>
+          <div class="stat-info">
+            <div class="stat-num" id="stat-num-2">—</div>
+            <div class="stat-label" id="stat-label-2">Total Downloads</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🎓</div>
+          <div class="stat-info">
+            <div class="stat-num" id="stat-profile">—</div>
+            <div class="stat-label" id="stat-profile-label">Your Profile</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="dash-section">
+          <h3 class="section-title">Recent Notes</h3>
+          <div id="recent-notes-list" class="recent-list">
+            <div class="loading-dots"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+        <div class="dash-section">
+          <h3 class="section-title">Subjects</h3>
+          <div id="subject-breakdown" class="subject-pills">
+            <div class="loading-dots"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== NOTES VIEW ===== -->
+  <div id="view-notes" class="view">
+    <div class="view-container">
+      <div class="view-header">
+        <div>
+          <h1>Study Notes</h1>
+          <p id="notes-subtitle">Browse available materials</p>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="search-input" placeholder="Search by title, subject, tags..." oninput="debounceSearch()" />
+        </div>
+        <div class="filter-group" id="teacher-filters">
+          <select id="filter-sem" onchange="loadNotes()">
+            <option value="">All Semesters</option>
+            <option value="1">Sem 1</option><option value="2">Sem 2</option>
+            <option value="3">Sem 3</option><option value="4">Sem 4</option>
+            <option value="5">Sem 5</option><option value="6">Sem 6</option>
+            <option value="7">Sem 7</option><option value="8">Sem 8</option>
+          </select>
+          <select id="filter-branch" onchange="loadNotes()">
+            <option value="">All Branches</option>
+            <option value="CSE">CSE</option><option value="ECE">ECE</option>
+            <option value="ME">ME</option><option value="CE">CE</option>
+            <option value="EEE">EEE</option><option value="IT">IT</option>
+            <option value="AIDS">AIDS</option><option value="AIML">AIML</option>
+            <option value="ALL">ALL</option>
+          </select>
+          <select id="filter-section" onchange="loadNotes()">
+            <option value="">All Sections</option>
+            <option value="A">Section A</option><option value="B">Section B</option>
+            <option value="C">Section C</option><option value="D">Section D</option>
+            <option value="ALL">ALL</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="notes-grid" class="notes-grid">
+        <div class="loading-state">
+          <div class="loading-dots"><span></span><span></span><span></span></div>
+          <p>Loading notes...</p>
+        </div>
+      </div>
+
+      <div id="pagination" class="pagination hidden"></div>
+    </div>
+  </div>
+
+  <!-- ===== UPLOAD VIEW (Teacher Only) ===== -->
+  <div id="view-upload" class="view teacher-only">
+    <div class="view-container narrow">
+      <div class="view-header">
+        <div>
+          <h1>Upload Notes</h1>
+          <p>Share materials with your students</p>
+        </div>
+      </div>
+
+      <div class="upload-card">
+        <div class="form-group">
+          <label>Note Title <span class="req">*</span></label>
+          <input type="text" id="up-title" placeholder="e.g. Unit 3 – Linked Lists" />
+        </div>
+        <div class="form-group">
+          <label>Subject <span class="req">*</span></label>
+          <input type="text" id="up-subject" placeholder="e.g. Data Structures & Algorithms" />
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="up-desc" rows="3" placeholder="Brief description of this material..."></textarea>
+        </div>
+
+        <div class="form-row three">
+          <div class="form-group">
+            <label>Semester <span class="req">*</span></label>
+            <select id="up-semester">
+              <option value="">Select</option>
+              <option value="1">Sem 1</option><option value="2">Sem 2</option>
+              <option value="3">Sem 3</option><option value="4">Sem 4</option>
+              <option value="5">Sem 5</option><option value="6">Sem 6</option>
+              <option value="7">Sem 7</option><option value="8">Sem 8</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Branch <span class="req">*</span></label>
+            <select id="up-branch">
+              <option value="">Select</option>
+              <option value="CSE">CSE</option><option value="ECE">ECE</option>
+              <option value="ME">ME</option><option value="CE">CE</option>
+              <option value="EEE">EEE</option><option value="IT">IT</option>
+              <option value="AIDS">AIDS</option><option value="AIML">AIML</option>
+              <option value="ALL">All Branches</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Section</label>
+            <select id="up-section">
+              <option value="ALL">All Sections</option>
+              <option value="A">Section A</option>
+              <option value="B">Section B</option>
+              <option value="C">Section C</option>
+              <option value="D">Section D</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Tags <span class="hint">(comma-separated)</span></label>
+          <input type="text" id="up-tags" placeholder="e.g. algorithms, arrays, sorting" />
+        </div>
+
+        <div class="form-group">
+          <label>Upload File <span class="req">*</span></label>
+          <div class="file-drop-zone" id="file-drop-zone" onclick="document.getElementById('file-input').click()">
+            <div class="file-drop-icon">📄</div>
+            <div class="file-drop-text">
+              <strong>Click to browse</strong> or drag & drop
+              <span>PDF, DOC, DOCX, PPT, PPTX, TXT, Images • Max 25MB</span>
+            </div>
+            <input type="file" id="file-input" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.png,.jpg,.jpeg" style="display:none" onchange="handleFileSelect(this)" />
+          </div>
+          <div id="file-preview" class="file-preview hidden"></div>
+        </div>
+
+        <div id="upload-progress" class="upload-progress hidden">
+          <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+          <span id="progress-text">Uploading...</span>
+        </div>
+
+        <div id="upload-error" class="form-error hidden"></div>
+        <div id="upload-success" class="form-success hidden"></div>
+
+        <button class="btn-primary full" id="upload-btn" onclick="handleUpload()">
+          <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+          Upload Note
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MY NOTES VIEW (Teacher) ===== -->
+  <div id="view-my-notes" class="view teacher-only">
+    <div class="view-container">
+      <div class="view-header">
+        <div>
+          <h1>My Uploads</h1>
+          <p>Manage notes you've shared</p>
+        </div>
+      </div>
+      <div id="my-notes-grid" class="notes-grid">
+        <div class="loading-state">
+          <div class="loading-dots"><span></span><span></span><span></span></div>
+          <p>Loading your notes...</p>
+        </div>
+      </div>
+      <div id="my-pagination" class="pagination hidden"></div>
+    </div>
+  </div>
+
+  <!-- ===== MARKS ENTRY VIEW (Teacher Only) ===== -->
+  <div id="view-marks-entry" class="view teacher-only">
+    <div class="view-container narrow">
+      <div class="view-header">
+        <div>
+          <h1>Marks Entry</h1>
+          <p>Enter student marks by USN</p>
+        </div>
+        <button class="btn-secondary" onclick="switchView('class-report')">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          View Class Report
+        </button>
+      </div>
+
+      <div class="upload-card">
+        <!-- Student Info -->
+        <div class="marks-section-title">Student Information</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>USN <span class="req">*</span></label>
+            <input type="text" id="me-usn" placeholder="e.g. 1MS21CS001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" />
+          </div>
+          <div class="form-group">
+            <label>Student Name <span class="req">*</span></label>
+            <input type="text" id="me-name" placeholder="Full name" />
+          </div>
+        </div>
+        <div class="form-row three">
+          <div class="form-group">
+            <label>Semester <span class="req">*</span></label>
+            <select id="me-semester">
+              <option value="">Select</option>
+              <option value="1">Sem 1</option><option value="2">Sem 2</option>
+              <option value="3">Sem 3</option><option value="4">Sem 4</option>
+              <option value="5">Sem 5</option><option value="6">Sem 6</option>
+              <option value="7">Sem 7</option><option value="8">Sem 8</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Branch <span class="req">*</span></label>
+            <select id="me-branch">
+              <option value="">Select</option>
+              <option value="CSE">CSE</option><option value="ECE">ECE</option>
+              <option value="ME">ME</option><option value="CE">CE</option>
+              <option value="EEE">EEE</option><option value="IT">IT</option>
+              <option value="AIDS">AIDS</option><option value="AIML">AIML</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Section <span class="req">*</span></label>
+            <select id="me-section">
+              <option value="">Select</option>
+              <option value="A">A</option><option value="B">B</option>
+              <option value="C">C</option><option value="D">D</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Academic Year <span class="req">*</span></label>
+          <input type="text" id="me-year" placeholder="e.g. 2024-25" style="max-width:200px" />
+        </div>
+
+        <!-- Subjects Table -->
+        <div class="marks-section-title" style="margin-top:1.5rem">
+          Subject Marks
+          <button class="btn-secondary" style="float:right;margin-top:-4px" onclick="addSubjectRow()">+ Add Subject</button>
+        </div>
+
+        <div class="marks-table-wrap">
+          <table class="marks-table" id="marks-subjects-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Subject Name</th>
+                <th>IA1<br><small>/30</small></th>
+                <th>IA2<br><small>/30</small></th>
+                <th>IA3<br><small>/30</small></th>
+                <th>SEE<br><small>/100</small></th>
+                <th>Credits</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="subjects-body">
+              <!-- rows injected by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="form-group" style="margin-top:1rem">
+          <label>Remarks</label>
+          <textarea id="me-remarks" rows="2" placeholder="Optional remarks..."></textarea>
+        </div>
+
+        <div id="marks-entry-error" class="form-error hidden"></div>
+        <div id="marks-entry-success" class="form-success hidden"></div>
+
+        <div style="display:flex;gap:0.75rem;margin-top:1rem;flex-wrap:wrap">
+          <button class="btn-primary" id="save-marks-btn" onclick="saveMarks()">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+            Save Marks
+          </button>
+          <button class="btn-secondary" onclick="lookupUSN()">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Load Existing
+          </button>
+          <button class="btn-secondary" onclick="resetMarksForm()">Reset Form</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CLASS REPORT VIEW (Teacher Only) ===== -->
+  <div id="view-class-report" class="view teacher-only">
+    <div class="view-container">
+      <div class="view-header">
+        <div>
+          <h1>Class Performance Report</h1>
+          <p>Analyse marks across students</p>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <select id="cr-semester" onchange="loadClassReport()">
+          <option value="">Select Semester</option>
+          <option value="1">Sem 1</option><option value="2">Sem 2</option>
+          <option value="3">Sem 3</option><option value="4">Sem 4</option>
+          <option value="5">Sem 5</option><option value="6">Sem 6</option>
+          <option value="7">Sem 7</option><option value="8">Sem 8</option>
+        </select>
+        <select id="cr-branch" onchange="loadClassReport()">
+          <option value="">All Branches</option>
+          <option value="CSE">CSE</option><option value="ECE">ECE</option>
+          <option value="ME">ME</option><option value="CE">CE</option>
+          <option value="EEE">EEE</option><option value="IT">IT</option>
+          <option value="AIDS">AIDS</option><option value="AIML">AIML</option>
+        </select>
+        <select id="cr-section" onchange="loadClassReport()">
+          <option value="">All Sections</option>
+          <option value="A">Section A</option><option value="B">Section B</option>
+          <option value="C">Section C</option><option value="D">Section D</option>
+        </select>
+        <input type="text" id="cr-year" placeholder="Year e.g. 2024-25" style="max-width:160px" oninput="debounceClassReport()" />
+      </div>
+
+      <div id="class-report-content">
+        <div class="empty-state"><div class="empty-icon">📊</div><h3>Select filters above</h3><p>Choose semester, branch and section to load the report.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PERFORMANCE VIEW (Student Only) ===== -->
+  <div id="view-performance" class="view student-only">
+    <div class="view-container">
+      <div class="view-header">
+        <div>
+          <h1>My Performance</h1>
+          <p id="perf-subtitle">Academic scorecard across all semesters</p>
+        </div>
+      </div>
+
+      <div id="usn-missing-banner" class="form-error hidden" style="margin-bottom:1.5rem;padding:1rem 1.25rem;border-radius:12px">
+        ⚠️ Your USN is not set. Please update your profile so teachers can link your marks.
+        <br><input type="text" id="usn-quick-set" placeholder="Enter your USN e.g. 1MS21CS001" style="margin-top:0.5rem;max-width:280px;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" />
+        <button class="btn-primary" style="margin-top:0.5rem" onclick="saveUSN()">Save USN</button>
+      </div>
+
+      <div id="performance-content">
+        <div class="loading-state"><div class="loading-dots"><span></span><span></span><span></span></div><p>Loading your marks...</p></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== MARKS DETAIL MODAL ===== -->
+<div id="marks-modal" class="modal-overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal-box" style="max-width:750px">
+    <button class="modal-close" onclick="document.getElementById('marks-modal').classList.add('hidden')">✕</button>
+    <div id="marks-modal-content"></div>
+  </div>
+</div>
+<div id="note-modal" class="modal-overlay hidden" onclick="closeModal(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeNoteModal()">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- ===== EDIT NOTE MODAL ===== -->
+<div id="edit-modal" class="modal-overlay hidden" onclick="closeEditModal(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeEditModalDirect()">✕</button>
+    <h2 style="margin-bottom:1.5rem;">Edit Note</h2>
+    <div id="edit-modal-content"></div>
+  </div>
+</div>
+
+<!-- Toast notifications -->
+<div id="toast-container"></div>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/notes.js"></script>
+<script src="js/marks.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
