@@ -288,5 +288,31 @@ router.delete('/:id', protect, authorize('teacher'), async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error.' });
   }
 });
+// @route   GET /api/notes/:id/file
+// @desc    Proxy download a note file
+// @access  Private
+router.get('/:id/file', protect, async (req, res) => {
+  try {
+    const note = await Note.findById(req.params.id);
+    if (!note || !note.isActive) {
+      return res.status(404).json({ success: false, message: 'Note not found.' });
+    }
+
+    // Increment download count
+    note.downloadCount += 1;
+    await note.save();
+
+    // Add fl_attachment to Cloudinary URL to force download
+    let fileUrl = note.fileUrl;
+    if (fileUrl.includes('cloudinary.com')) {
+      fileUrl = fileUrl.replace('/upload/', '/upload/fl_attachment/');
+    }
+
+    // Redirect to the Cloudinary URL with download flag
+    res.redirect(fileUrl);
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Download failed.' });
+  }
+});
 
 module.exports = router;

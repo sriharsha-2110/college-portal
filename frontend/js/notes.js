@@ -265,10 +265,10 @@ async function openNoteModal(id) {
       </div>
 
       <div class="modal-footer">
-        <a href="${note.fileUrl}" target="_blank" rel="noopener" class="btn-primary" onclick="trackDownload('${note._id}')">
+        <button class="btn-primary" onclick="downloadFile('${note._id}', '${note.fileUrl}', '${escapeHtml(note.fileName)}')">
           <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Download File
-        </a>
+        </button>
         <button class="btn-secondary" onclick="closeNoteModal()">Close</button>
       </div>`;
   } catch (err) {
@@ -519,4 +519,42 @@ if (dropZone) {
       handleFileSelect(document.getElementById('file-input'));
     }
   });
+}
+async function downloadFile(noteId, fileUrl, fileName) {
+  try {
+    showToast('Starting download...', 'info');
+
+    // Use backend proxy route — avoids CORS issues
+    const proxyUrl = `${API_BASE}/notes/${noteId}/file`;
+    const token = Storage.getToken();
+
+    // Fetch the file through the proxy
+    const response = await fetch(proxyUrl, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!response.ok) throw new Error('Download failed');
+
+    // Get the file as a blob
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    // Trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName || 'download';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Clean up blob URL
+    setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+
+    showToast('Download complete!');
+  } catch (err) {
+    console.error('Download error:', err);
+    // Fallback — open directly in new tab
+    window.open(fileUrl, '_blank');
+    showToast('Opening file in new tab.', 'info');
+  }
 }
