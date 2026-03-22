@@ -262,6 +262,27 @@
           </div>
         </div>
       </div>
+<!-- AI Feature Cards -->
+      <div class="ai-cards-row" id="ai-cards-row">
+        <!-- Teacher AI card -->
+        <div class="ai-feature-card teacher-only" onclick="switchView('upload'); openAIGenerator()">
+          <div class="ai-card-icon">✨</div>
+          <div class="ai-card-info">
+            <div class="ai-card-title">AI Notes Generator</div>
+            <div class="ai-card-desc">Type a topic — AI writes structured notes instantly</div>
+          </div>
+          <div class="ai-card-arrow">→</div>
+        </div>
+        <!-- Student AI card -->
+        <div class="ai-feature-card student-only" onclick="openChatbot()">
+          <div class="ai-card-icon">💬</div>
+          <div class="ai-card-info">
+            <div class="ai-card-title">AI Study Assistant</div>
+            <div class="ai-card-desc">Ask any question — get instant study help</div>
+          </div>
+          <div class="ai-card-arrow">→</div>
+        </div>
+      </div>
 
       <div class="dash-grid">
         <div class="dash-section">
@@ -338,6 +359,33 @@
         <div>
           <h1>Upload Notes</h1>
           <p>Share materials with your students</p>
+        </div>
+      </div>
+
+<!-- AI Generator Panel -->
+      <div class="ai-generator-panel" id="ai-generator-panel">
+        <div class="ai-gen-header">
+          <span>✨ AI Notes Generator</span>
+          <button class="ai-gen-toggle" onclick="toggleAIPanel()">Hide ▲</button>
+        </div>
+        <div id="ai-gen-body">
+          <div class="form-group">
+            <label>Describe the topic you want notes on</label>
+            <textarea id="ai-topic" rows="2" placeholder="e.g. Explain Binary Search Trees with insertion and deletion operations for Sem 3 CSE students"></textarea>
+          </div>
+          <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+            <button class="btn-primary" id="ai-gen-btn" onclick="generateAINotes()">
+              ✨ Generate Notes
+            </button>
+            <span id="ai-gen-status" style="font-size:0.82rem;color:var(--text-3)"></span>
+          </div>
+          <div id="ai-gen-preview" class="ai-gen-preview hidden">
+            <div class="ai-gen-preview-header">
+              <span>Generated Notes Preview</span>
+              <button class="btn-secondary" onclick="useGeneratedNotes()">✅ Use These Notes</button>
+            </div>
+            <div id="ai-gen-content" class="ai-gen-content"></div>
+          </div>
         </div>
       </div>
 
@@ -641,8 +689,51 @@
 
 <!-- Toast notifications -->
 <div id="toast-container"></div>
+<!-- ===== AI CHATBOT MODAL ===== -->
+<div id="chatbot-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeChatbot()">
+  <div class="modal-box chatbot-modal-box">
+    <div class="chatbot-header">
+      <div class="chatbot-header-info">
+        <div class="chatbot-avatar">🤖</div>
+        <div>
+          <div class="chatbot-title">AI Study Assistant</div>
+          <div class="chatbot-subtitle">Ask me anything about your subjects</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeChatbot()">✕</button>
+    </div>
+
+    <div class="chatbot-messages" id="chatbot-messages">
+      <div class="chat-msg ai">
+        <div class="chat-bubble">
+          👋 Hi! I am your personal study assistant.<br>
+          Ask me to explain concepts, solve problems, or help you prepare for exams!
+        </div>
+      </div>
+    </div>
+
+    <div class="chatbot-input-row">
+      <textarea
+        id="chatbot-input"
+        placeholder="Ask a question e.g. Explain recursion with an example..."
+        rows="2"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage()}"
+      ></textarea>
+      <button class="chatbot-send-btn" onclick="sendChatMessage()">
+        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+    <div style="text-align:center;font-size:0.72rem;color:var(--text-3);padding:0.4rem">
+      Powered by Claude AI · Press Enter to send · Shift+Enter for new line
+    </div>
+  </div>
+</div>
+
 
 <script src="js/api.js"></script>
+<script src="js/ai.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/notes.js"></script>
 <script src="js/marks.js"></script>
