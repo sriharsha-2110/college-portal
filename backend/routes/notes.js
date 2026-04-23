@@ -311,7 +311,6 @@ router.get('/:id/file', protect, async (req, res) => {
 
 const https = require('https');
 const http = require('http');
-const { cloudinary } = require('../config/cloudinary');
 
 // Helper to follow redirects and stream
 const streamFile = (url, res, fileName, retryCount = 0) => {
