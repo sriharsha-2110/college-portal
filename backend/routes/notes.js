@@ -310,6 +310,49 @@ router.get('/:id/file', protect, async (req, res) => {
 });
 
 const https = require('https');
+const http = require('http');
+
+// Helper to follow redirects and stream
+const streamFile = (url, res, fileName, retryCount = 0) => {
+  if (retryCount > 5) {
+    return res.status(500).send('Too many redirects');
+  }
+
+  const client = url.startsWith('https') ? https : http;
+  
+  client.get(url, (proxyRes) => {
+    // Handle redirects
+    if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
+      let redirectUrl = proxyRes.headers.location;
+      if (!redirectUrl.startsWith('http')) {
+        const origin = new URL(url).origin;
+        redirectUrl = origin + redirectUrl;
+      }
+      return streamFile(redirectUrl, res, fileName, retryCount + 1);
+    }
+
+    if (proxyRes.statusCode !== 200) {
+      console.error(`Download failed with status: ${proxyRes.statusCode}`);
+      return res.status(proxyRes.statusCode).send('Error fetching file');
+    }
+
+    // Set headers
+    const safeFileName = encodeURIComponent(fileName).replace(/['()]/g, escape).replace(/\*/g, '%2A');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName.replace(/"/g, '')}"; filename*=UTF-8''${safeFileName}`);
+    
+    if (proxyRes.headers['content-type']) {
+      res.setHeader('Content-Type', proxyRes.headers['content-type']);
+    }
+    if (proxyRes.headers['content-length']) {
+      res.setHeader('Content-Length', proxyRes.headers['content-length']);
+    }
+
+    proxyRes.pipe(res);
+  }).on('error', (err) => {
+    console.error('Streaming error:', err);
+    if (!res.headersSent) res.status(500).send('Download failed');
+  });
+};
 
 // @route   GET /api/notes/:id/download
 // @desc    Direct download stream
@@ -322,32 +365,12 @@ router.get('/:id/download', protect, async (req, res) => {
     note.downloadCount += 1;
     await note.save();
 
-    const fileUrl = note.fileUrl;
-    const fileName = note.fileName || 'downloaded_file';
-
-    // Set headers to force download
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-
-    // Stream the file from Cloudinary to the client
-    https.get(fileUrl, (proxyRes) => {
-      if (proxyRes.statusCode !== 200) {
-        return res.status(proxyRes.statusCode).send('Error fetching file from storage');
-      }
-      
-      // Transfer content type if available
-      if (proxyRes.headers['content-type']) {
-        res.setHeader('Content-Type', proxyRes.headers['content-type']);
-      }
-      
-      proxyRes.pipe(res);
-    }).on('error', (err) => {
-      console.error('Download stream error:', err);
-      res.status(500).send('Download failed');
-    });
+    console.log(`Starting download stream for: ${note.fileName}`);
+    streamFile(note.fileUrl, res, note.fileName || 'file');
 
   } catch (error) {
     console.error('Download error:', error);
-    res.status(500).send('Server error during download');
+    if (!res.headersSent) res.status(500).send('Server error');
   }
 });
 
