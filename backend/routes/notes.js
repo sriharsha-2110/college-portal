@@ -365,8 +365,15 @@ router.get('/:id/download', protect, async (req, res) => {
     note.downloadCount += 1;
     await note.save();
 
+    // Sanitize URL: Remove fl_attachment if it was accidentally saved in the URL
+    let fileUrl = note.fileUrl;
+    if (fileUrl.includes('/fl_attachment/')) {
+      fileUrl = fileUrl.replace('/fl_attachment/', '/');
+    }
+
     console.log(`Starting download stream for: ${note.fileName}`);
-    streamFile(note.fileUrl, res, note.fileName || 'file');
+    console.log(`Fetching from Cloudinary: ${fileUrl}`);
+    streamFile(fileUrl, res, note.fileName || 'file');
 
   } catch (error) {
     console.error('Download error:', error);
