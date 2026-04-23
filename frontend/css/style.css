@@ -1745,3 +1745,111 @@ textarea { resize: vertical; min-height: 80px; }
   .att-quick-stats { grid-template-columns: repeat(3, 1fr); width: 100%; }
   .att-results-header { grid-template-columns: 1fr; }
 }
+
+/* ===== PREDICTION & ANALYTICS STYLES ===== */
+.prediction-card-wrap {
+  background: white;
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(212,175,55,0.1);
+  margin-top: 1rem;
+}
+.prediction-intro {
+  font-size: 0.95rem;
+  color: var(--text);
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+.prediction-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.predict-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--cream);
+  border-radius: var(--radius-sm);
+  border-left: 4px solid var(--gold);
+}
+.predict-subj { display: flex; flex-direction: column; }
+.p-code { font-family: var(--font-mono); font-size: 0.75rem; color: var(--gold); font-weight: 700; }
+.p-name { font-weight: 600; color: var(--ink); }
+.predict-stats { display: flex; gap: 1.5rem; }
+.p-stat { display: flex; flex-direction: column; align-items: flex-end; }
+.p-label { font-size: 0.7rem; color: var(--text-3); text-transform: uppercase; }
+.p-val { font-weight: 700; color: var(--ink); }
+.p-stat.highlight .p-val { font-size: 1.25rem; }
+
+/* Categorization Tiles */
+.categorization-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+.cat-card {
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  background: white;
+  border: 1px solid var(--border);
+  transition: transform 0.3s ease;
+}
+.cat-card:hover { transform: translateY(-5px); }
+.cat-card.achievers { border-top: 5px solid #16a34a; box-shadow: 0 10px 20px rgba(22,163,74,0.05); }
+.cat-card.consistent { border-top: 5px solid #2563eb; box-shadow: 0 10px 20px rgba(37,99,235,0.05); }
+.cat-card.at-risk { border-top: 5px solid #dc2626; box-shadow: 0 10px 20px rgba(220,38,38,0.05); }
+
+.cat-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.cat-icon { font-size: 2rem; }
+.cat-title { font-weight: 700; font-size: 1.1rem; color: var(--ink); }
+.cat-count { font-size: 0.85rem; color: var(--text-2); font-weight: 600; }
+.cat-desc { font-size: 0.82rem; color: var(--text-3); line-height: 1.4; }
+
+/* Attendance Heatmap */
+.att-heatmap-wrap {
+  background: white;
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.att-heatmap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 1rem;
+}
+.att-heat-square {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: #eee;
+  cursor: pointer;
+}
+.att-heat-square.status-present { background: var(--green); }
+.att-heat-square.status-absent { background: var(--accent); }
+.att-heat-square.status-none { background: #f3f4f6; border: 1px solid #e5e7eb; }
+
+.att-heat-legend {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+.att-heat-legend-item { display: flex; align-items: center; gap: 0.5rem; }
+
+/* Grade colors for predictions */
+.grade-O { color: #16a34a; }
+.grade-A\+ { color: #2563eb; }
+.grade-A { color: #7c3aed; }
+.grade-B\+ { color: #d97706; }
+.grade-B { color: #ea580c; }
+.grade-F { color: #dc2626; }
+
+@media (max-width: 800px) {
+  .categorization-grid { grid-template-columns: 1fr; }
+  .predict-item { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .predict-stats { width: 100%; justify-content: space-between; }
+}

@@ -286,23 +286,40 @@ function renderClassReport(records, stats, params) {
         </div>`).join('')}
     </div>` : ''}
 
-    <!-- Students Needing Attention -->
-    ${(stats.failingStudents && stats.failingStudents.length) ? `
-    <div class="cr-section-title" style="margin-top:2rem">⚠️ Needs Attention <span style="font-size:0.8rem;font-weight:400;color:var(--text-3)">(${stats.failingStudents.length} student${stats.failingStudents.length > 1 ? 's' : ''} with backlogs)</span></div>
-    <div class="failing-grid">
-      ${stats.failingStudents.map(s => `
-        <div class="failing-card">
-          <div class="failing-info">
-            <div class="failing-name">${escapeHtml(s.studentName)}</div>
-            <div class="failing-usn">${escapeHtml(s.usn)} · Sec ${s.section}</div>
+    <!-- Academic Categorization (Clustering) -->
+    <div class="cr-section-title" style="margin-top:2rem">📈 Academic Categorization</div>
+    <div class="categorization-grid">
+      <div class="cat-card achievers">
+        <div class="cat-header">
+          <div class="cat-icon">🚀</div>
+          <div class="cat-info">
+            <div class="cat-title">High Achievers</div>
+            <div class="cat-count">${records.filter(r => r.analytics.cgpa >= 8.5).length} Students</div>
           </div>
-          <div class="failing-stats">
-            <span class="failing-backlogs">${s.backlogs} backlog${s.backlogs > 1 ? 's' : ''}</span>
-            <span class="failing-cgpa">CGPA: ${s.cgpa.toFixed(2)}</span>
-            <span class="failing-percent">${s.avgPercent}%</span>
+        </div>
+        <div class="cat-desc">CGPA ≥ 8.5. Consistently performing at the top of the class.</div>
+      </div>
+      <div class="cat-card consistent">
+        <div class="cat-header">
+          <div class="cat-icon">⚖️</div>
+          <div class="cat-info">
+            <div class="cat-title">Consistent</div>
+            <div class="cat-count">${records.filter(r => r.analytics.cgpa < 8.5 && r.analytics.cgpa >= 6.5 && r.analytics.passedAll).length} Students</div>
           </div>
-        </div>`).join('')}
-    </div>` : ''}
+        </div>
+        <div class="cat-desc">CGPA 6.5 - 8.5 with no backlogs. Steady performance.</div>
+      </div>
+      <div class="cat-card at-risk">
+        <div class="cat-header">
+          <div class="cat-icon">🎯</div>
+          <div class="cat-info">
+            <div class="cat-title">Needs Attention</div>
+            <div class="cat-count">${records.filter(r => r.analytics.backlogs > 0 || r.analytics.cgpa < 5.5).length} Students</div>
+          </div>
+        </div>
+        <div class="cat-desc">Have backlogs or CGPA < 5.5. May require academic counseling.</div>
+      </div>
+    </div>
 
     <div class="cr-section-title" style="margin-top:2rem">Subject-wise Performance</div>
     <div class="subject-stats-grid">
@@ -590,9 +607,85 @@ function renderPerformanceDashboard(records, user) {
       ${trendSVG}
     </div>` : ''}
 
+    <!-- Data Science: Performance Prediction -->
+    <div class="dash-section" style="margin-bottom:2rem">
+      <h3 class="section-title">✨ Performance Insights (AI Prediction)</h3>
+      <div class="prediction-grid">
+        ${records[0] ? renderPerformancePrediction(records[0]) : ''}
+      </div>
+    </div>
+
     <!-- Semester-wise cards -->
     <h3 class="section-title" style="margin-bottom:1rem">Semester-wise Performance</h3>
     <div class="perf-grid">${semCards}</div>`;
+}
+
+function renderPerformancePrediction(latestRecord) {
+  const predictions = latestRecord.subjects.map(s => {
+    const ias = [s.ia1, s.ia2, s.ia3].filter(v => v !== null && v !== undefined);
+    if (ias.length === 0) return null;
+    
+    const avgIA = ias.reduce((a,b) => a+b, 0) / ias.length;
+    // Simple linear projection: if they get X in IA (out of 30), they might get Y in SEE (out of 100)
+    // Model: PredictedSEE = (avgIA / 30) * 100 * 0.9 (conservative factor)
+    const predictedSEE = Math.round((avgIA / 30) * 90);
+    const estimatedTotal = Math.round((avgIA * 1.33) + (predictedSEE * 0.6)); // weighted
+    
+    let grade = 'F';
+    if (estimatedTotal >= 90) grade = 'O';
+    else if (estimatedTotal >= 80) grade = 'A+';
+    else if (estimatedTotal >= 70) grade = 'A';
+    else if (estimatedTotal >= 60) grade = 'B+';
+    else if (estimatedTotal >= 50) grade = 'B';
+    else if (estimatedTotal >= 45) grade = 'C';
+    else if (estimatedTotal >= 40) grade = 'P';
+
+    return {
+      subject: s.subjectName,
+      code: s.subjectCode,
+      avgIA: avgIA.toFixed(1),
+      predictedSEE: Math.min(predictedSEE, 100),
+      grade
+    };
+  }).filter(Boolean);
+
+  if (predictions.length === 0) return '<p class="empty-msg">Not enough IA data to generate predictions.</p>';
+
+  return `
+    <div class="prediction-card-wrap">
+      <div class="prediction-intro">
+        Based on your current Internal Assessment (IA) trends in <strong>Semester ${latestRecord.semester}</strong>, 
+        our model predicts your potential performance in the final exams:
+      </div>
+      <div class="prediction-list">
+        ${predictions.map(p => `
+          <div class="predict-item">
+            <div class="predict-subj">
+              <span class="p-code">${p.code}</span>
+              <span class="p-name">${p.subject}</span>
+            </div>
+            <div class="predict-stats">
+              <div class="p-stat">
+                <span class="p-label">Avg IA</span>
+                <span class="p-val">${p.avgIA}/30</span>
+              </div>
+              <div class="p-stat">
+                <span class="p-label">Est. SEE</span>
+                <span class="p-val">${p.predictedSEE}/100</span>
+              </div>
+              <div class="p-stat highlight">
+                <span class="p-label">Est. Grade</span>
+                <span class="p-val grade-${p.grade}">${p.grade}</span>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="prediction-disclaimer">
+        * These are probabilistic estimates based on current trends. Actual results may vary.
+      </div>
+    </div>
+  `;
 }
 
 function renderCGPATrend(points) {

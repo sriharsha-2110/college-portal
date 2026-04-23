@@ -140,9 +140,34 @@ router.get('/my', protect, async (req, res) => {
         percentage: v.total > 0 ? Math.round((v.present / v.total) * 100) : 0,
       }));
 
+    // 5. Daily activity (last 30 days) for heatmap
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const recentAttendance = await Attendance.find({
+      isActive: true,
+      $or: [
+        { 'presentStudents.usn': req.user.usn.toUpperCase() },
+        { 'absentStudents.usn': req.user.usn.toUpperCase() }
+      ],
+      date: { $gte: thirtyDaysAgo }
+    }).sort({ date: 1 });
+
+    const dailyActivity = recentAttendance.map(a => ({
+      date: a.date.toISOString().split('T')[0],
+      status: a.presentStudents.find(s => s.usn === req.user.usn.toUpperCase()) ? 'present' : 'absent'
+    }));
+
     res.json({
       success: true,
-      stats: { totalClasses, attended, percentage, subjectBreakdown, monthlyTrend },
+      stats: {
+        totalClasses,
+        attended,
+        percentage,
+        subjectBreakdown,
+        monthlyTrend,
+        dailyActivity
+      },
       presentRecords: records,
       absentRecords,
     });

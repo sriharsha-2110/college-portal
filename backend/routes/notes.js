@@ -289,7 +289,7 @@ router.delete('/:id', protect, authorize('teacher'), async (req, res) => {
   }
 });
 // @route   GET /api/notes/:id/file
-// @desc    Get download URL for a note file
+// @desc    Get download URL for a note file (JSON)
 // @access  Private
 router.get('/:id/file', protect, async (req, res) => {
   try {
@@ -302,16 +302,36 @@ router.get('/:id/file', protect, async (req, res) => {
     note.downloadCount += 1;
     await note.save();
 
-    // Add fl_attachment to Cloudinary URL to force download
     let fileUrl = note.fileUrl;
     if (fileUrl.includes('cloudinary.com')) {
       fileUrl = fileUrl.replace('/upload/', '/upload/fl_attachment/');
     }
 
-    // Return the URL as JSON so frontend can trigger download without CORS issues
     res.json({ success: true, url: fileUrl, fileName: note.fileName });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Download failed.' });
+  }
+});
+
+// @route   GET /api/notes/:id/download
+// @desc    Direct download redirect
+// @access  Private
+router.get('/:id/download', protect, async (req, res) => {
+  try {
+    const note = await Note.findById(req.params.id);
+    if (!note || !note.isActive) return res.status(404).send('Note not found');
+
+    note.downloadCount += 1;
+    await note.save();
+
+    let fileUrl = note.fileUrl;
+    if (fileUrl.includes('cloudinary.com')) {
+      fileUrl = fileUrl.replace('/upload/', '/upload/fl_attachment/');
+    }
+    
+    res.redirect(fileUrl);
+  } catch (error) {
+    res.status(500).send('Download failed');
   }
 });
 

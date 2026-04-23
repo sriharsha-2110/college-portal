@@ -524,32 +524,14 @@ async function downloadFile(noteId, fileUrl, fileName) {
   try {
     showToast('Starting download...', 'info');
 
-    // Call backend to get the download URL (no CORS issues)
-    const proxyUrl = `${API_BASE}/notes/${noteId}/file`;
-    const token = Storage.getToken();
-
-    const response = await fetch(proxyUrl, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-
-    if (!response.ok) throw new Error('Download failed');
-
-    const data = await response.json();
-
-    if (data.success && data.url) {
-      // Open the Cloudinary download URL directly — fl_attachment forces download
-      const link = document.createElement('a');
-      link.href = data.url;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.download = data.fileName || fileName || 'download';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      showToast('Download started!');
-    } else {
-      throw new Error('Invalid response');
-    }
+    // Method 1: Get the proxy download URL
+    const proxyUrl = `${API_BASE}/notes/${noteId}/download?token=${Storage.getToken()}`;
+    
+    // We use window.location.assign because the backend now redirects to the Cloudinary URL 
+    // with fl_attachment which triggers a browser download.
+    window.location.assign(proxyUrl);
+    
+    showToast('Download started!');
   } catch (err) {
     console.error('Download error:', err);
     // Fallback — open the original file URL directly

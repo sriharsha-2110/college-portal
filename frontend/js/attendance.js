@@ -137,15 +137,18 @@ async function processGroupPhoto() {
       return;
     }
 
-    const matcher = new faceapi.FaceMatcher(labeledDescriptors, 0.55);
+    const matcher = new faceapi.FaceMatcher(labeledDescriptors, 0.45); // Relaxed threshold for group photos
 
     // Match each detected face
     matchedStudents = [];
     unmatchedCount = 0;
     const matchedUSNs = new Set();
 
-    detections.forEach(det => {
+    console.log(`Starting match for ${detections.length} detections...`);
+    detections.forEach((det, i) => {
       const match = matcher.findBestMatch(det.descriptor);
+      console.log(`Detection ${i}: Best match is ${match.label} with distance ${match.distance.toFixed(3)}`);
+      
       if (match.label !== 'unknown') {
         const [usn, name] = match.label.split('|');
         if (!matchedUSNs.has(usn)) {
@@ -340,11 +343,47 @@ function renderMyAttendance(stats) {
       <div class="att-subj-list">${subjectBars || '<p style="color:var(--text-3);font-size:0.85rem">No subject data yet.</p>'}</div>
     </div>
 
+    <!-- Attendance Heatmap (Data Science visualization) -->
+    <div class="dash-section" style="margin-top:1.5rem">
+      <h3 class="section-title">📅 Attendance Activity (Last 30 Days)</h3>
+      <div class="att-heatmap-wrap">
+        ${renderAttendanceHeatmap(stats.dailyActivity || [])}
+      </div>
+    </div>
+
     ${trendSVG ? `
     <div class="dash-section" style="margin-top:1.5rem">
       <h3 class="section-title">Monthly Trend</h3>
       ${trendSVG}
     </div>` : ''}`;
+}
+
+function renderAttendanceHeatmap(activity) {
+  // activity is an array of { date: 'YYYY-MM-DD', status: 'present'|'absent'|'none' }
+  const days = 30;
+  const today = new Date();
+  const heatmap = [];
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    const act = activity.find(a => a.date === dateStr) || { status: 'none' };
+    heatmap.push({ date: dateStr, status: act.status });
+  }
+
+  return `
+    <div class="att-heatmap">
+      ${heatmap.map(h => `
+        <div class="att-heat-square status-${h.status}" title="${h.date}: ${h.status}"></div>
+      `).join('')}
+    </div>
+    <div class="att-heat-legend">
+      <div class="att-heat-legend-item"><span class="att-heat-square status-present"></span> Present</div>
+      <div class="att-heat-legend-item"><span class="att-heat-square status-absent"></span> Absent</div>
+      <div class="att-heat-legend-item"><span class="att-heat-square status-none"></span> No Class</div>
+    </div>
+  `;
 }
 
 function renderAttendanceTrend(trend) {
