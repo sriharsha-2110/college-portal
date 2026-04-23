@@ -320,7 +320,13 @@ const streamFile = (url, res, fileName, retryCount = 0) => {
 
   const client = url.startsWith('https') ? https : http;
   
-  client.get(url, (proxyRes) => {
+  const options = {
+    headers: {
+      'User-Agent': 'College-Portal-Backend/1.0'
+    }
+  };
+
+  client.get(url, options, (proxyRes) => {
     // Handle redirects
     if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
       let redirectUrl = proxyRes.headers.location;
@@ -332,8 +338,9 @@ const streamFile = (url, res, fileName, retryCount = 0) => {
     }
 
     if (proxyRes.statusCode !== 200) {
-      console.error(`Download failed with status: ${proxyRes.statusCode}`);
-      return res.status(proxyRes.statusCode).send('Error fetching file');
+      console.error(`Cloudinary Error: Status ${proxyRes.statusCode} for URL ${url}`);
+      // Send more info if possible
+      return res.status(proxyRes.statusCode).send(`Error fetching file: Storage returned ${proxyRes.statusCode}`);
     }
 
     // Set headers
