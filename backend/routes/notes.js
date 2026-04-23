@@ -98,7 +98,7 @@ router.post('/', protect, authorize('teacher'), upload.single('file'), async (re
 // @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const { semester, branch, section, subject, search, page = 1, limit = 12 } = req.query;
+    const { semester, branch, section, subject, search, page = 1, limit = 12, myNotes } = req.query;
 
     let filter = { isActive: true };
 
@@ -109,11 +109,14 @@ router.get('/', protect, async (req, res) => {
         { branch: { $in: [req.user.branch, 'ALL'] } },
         { section: { $in: [req.user.section, 'ALL'] } },
       ];
+    } else if (myNotes === 'true') {
+      // Teachers can see their own notes specifically
+      filter.uploadedBy = req.user.id;
     } else {
-      // Teachers can filter or see their own notes / all notes
+      // General filtering for teachers/admin
       if (semester) filter.semester = parseInt(semester);
-      if (branch) filter.branch = branch;
-      if (section) filter.section = section;
+      if (branch && branch !== 'ALL') filter.branch = branch;
+      if (section && section !== 'ALL') filter.section = section;
     }
 
     if (subject) filter.subject = { $regex: subject, $options: 'i' };
@@ -125,6 +128,8 @@ router.get('/', protect, async (req, res) => {
         { tags: { $in: [new RegExp(search, 'i')] } },
       ];
     }
+
+    console.log(`[Notes API] User: ${req.user.role}, Filter: ${JSON.stringify(filter)}`);
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const total = await Note.countDocuments(filter);

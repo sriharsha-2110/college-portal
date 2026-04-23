@@ -151,4 +151,19 @@ router.put('/profile', protect, async (req, res) => {
   }
 });
 
+// @route   GET /api/auth/student/:usn
+// @desc    Get student profile by USN (Teacher only)
+router.get('/student/:usn', protect, async (req, res) => {
+  try {
+    if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized.' });
+    }
+    const student = await User.findOne({ usn: req.params.usn.toUpperCase(), role: 'student' });
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
+    res.json({ success: true, student });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
+});
+
 module.exports = router;

@@ -248,6 +248,16 @@
         </div>
       </div>
 
+      <!-- Smart Status Banner (Action Required) -->
+      <div id="dash-status-banner" class="status-banner hidden">
+        <div class="status-banner-icon">🔔</div>
+        <div class="status-banner-content">
+          <h4 id="status-banner-title">Complete your profile</h4>
+          <p id="status-banner-text">Some features are restricted until you provide more details.</p>
+        </div>
+        <button id="status-banner-btn" class="btn-primary small">Fix Now</button>
+      </div>
+
       <div class="stats-grid" id="stats-grid">
         <div class="stat-card primary" id="stat-main">
           <div class="stat-icon">📚</div>
@@ -754,19 +764,45 @@
         </div>
       </div>
 
-      <!-- Face Registration Section -->
-      <div class="upload-card" style="margin-bottom:1.5rem">
-        <div class="marks-section-title">🤳 Register Your Face</div>
-        <p style="font-size:0.85rem;color:var(--text-2);margin-bottom:1rem">Upload a clear front-facing selfie so your teacher can mark your attendance using group photos.</p>
-        <div style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap">
-          <div>
-            <input type="file" id="face-photo-input" accept="image/*" style="margin-bottom:0.5rem" />
-            <button class="btn-primary" onclick="registerFace()">📸 Register Face</button>
+      <!-- Teacher: Student Face Registration (Verified) -->
+      <div class="upload-card teacher-only" style="margin-bottom:1.5rem">
+        <div class="marks-section-title">👤 Student Face Registration</div>
+        <p style="font-size:0.85rem;color:var(--text-2);margin-bottom:1rem">Search student by USN and upload their official photo for face recognition attendance.</p>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Student USN <span class="req">*</span></label>
+            <input type="text" id="t-reg-usn" placeholder="e.g. 1MS21CS001" style="text-transform:uppercase" />
           </div>
-          <img id="face-preview-img" class="hidden" style="width:80px;height:80px;border-radius:12px;object-fit:cover;border:2px solid var(--gold)" />
+          <div class="form-group">
+            <label>Official Photo <span class="req">*</span></label>
+            <input type="file" id="t-face-photo-input" accept="image/*" />
+          </div>
         </div>
-        <div id="face-reg-status" class="face-reg-status" style="margin-top:0.75rem"></div>
-        <div id="face-status" style="font-size:0.75rem;color:var(--text-3);margin-top:0.5rem"></div>
+        
+        <div style="display:flex;gap:1rem;align-items:center;margin-top:1rem">
+          <button class="btn-primary" onclick="teacherRegisterFace()">📸 Verify & Register Face</button>
+          <div id="t-face-preview-wrap" class="hidden">
+            <img id="t-face-preview-img" style="width:50px;height:50px;border-radius:8px;object-fit:cover" />
+          </div>
+        </div>
+        <div id="t-face-reg-status" class="face-reg-status" style="margin-top:0.75rem"></div>
+      </div>
+
+      <!-- Student: Official Verified Photo -->
+      <div class="upload-card student-only" style="margin-bottom:1.5rem" id="student-verified-photo-card">
+        <div class="marks-section-title">🆔 Official Attendance Identity</div>
+        <div style="display:flex;gap:1.5rem;align-items:center">
+          <div class="verified-photo-frame">
+            <img id="student-official-photo" src="img/placeholder-user.png" style="width:100px;height:100px;border-radius:16px;object-fit:cover;border:3px solid var(--gold)" />
+            <div class="verified-badge">✓ Verified</div>
+          </div>
+          <div>
+            <h3 id="student-official-name" style="margin-bottom:0.25rem">Loading...</h3>
+            <p id="student-official-usn" style="color:var(--text-3);font-size:0.9rem">USN: —</p>
+            <p style="font-size:0.8rem;color:var(--green);margin-top:0.5rem">● Face Recognition Active</p>
+          </div>
+        </div>
       </div>
 
       <div id="my-attendance-content">

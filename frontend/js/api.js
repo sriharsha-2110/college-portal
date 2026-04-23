@@ -49,6 +49,8 @@ const AuthAPI = {
   me: () => apiFetch('/auth/me'),
   updateProfile: (payload) =>
     apiFetch('/auth/profile', { method: 'PUT', body: JSON.stringify(payload) }),
+  
+  getStudent: (usn) => apiFetch(`/auth/student/${usn}`),
 };
 
 // Marks API
@@ -127,4 +129,7 @@ const AttendanceAPI = {
     apiFetch(`/attendance/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
 
   delete: (id) => apiFetch(`/attendance/${id}`, { method: 'DELETE' }),
+
+  registerStudentFace: (usn, payload) =>
+    apiFetch(`/attendance/register-face/${usn}`, { method: 'PUT', body: JSON.stringify(payload) }),
 };

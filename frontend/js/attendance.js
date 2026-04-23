@@ -28,53 +28,63 @@ async function loadFaceAPI() {
 
 // ─── STUDENT: FACE REGISTRATION ─────────────────────────────────────────────
 
-async function registerFace() {
-  const input = document.getElementById('face-photo-input');
-  const file = input?.files[0];
-  if (!file) { showToast('Please select a selfie photo first.', 'error'); return; }
+// ─── TEACHER: STUDENT FACE REGISTRATION (VERIFIED) ──────────────────────────
+async function teacherRegisterFace() {
+  const usnInput = document.getElementById('t-reg-usn');
+  const photoInput = document.getElementById('t-face-photo-input');
+  const statusEl = document.getElementById('t-face-reg-status');
+  
+  const usn = usnInput.value.trim().toUpperCase();
+  const file = photoInput?.files[0];
+  
+  if (!usn) { showToast('Please enter student USN.', 'error'); return; }
+  if (!file) { showToast('Please select a student photo.', 'error'); return; }
 
-  const statusEl = document.getElementById('face-reg-status');
-  statusEl.textContent = '⏳ Processing your face...';
+  statusEl.textContent = '⏳ Step 1/2: Processing face features...';
   statusEl.className = 'face-reg-status';
 
   const loaded = await loadFaceAPI();
-  if (!loaded) { statusEl.textContent = '❌ Face models failed to load.'; return; }
+  if (!loaded) return;
 
   try {
     const img = await faceapi.bufferToImage(file);
     const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
 
     if (!detection) {
-      statusEl.textContent = '❌ No face detected. Please upload a clear front-facing photo.';
+      statusEl.textContent = '❌ No face detected. Use a clear front-facing photo of the student.';
+      statusEl.className = 'face-reg-status error';
       return;
     }
 
     const descriptor = Array.from(detection.descriptor);
+    statusEl.textContent = '⏳ Step 2/2: Saving verified identity...';
 
-    // Upload photo to cloudinary via a data URL for storage
     const reader = new FileReader();
     reader.onload = async () => {
       const facePhotoUrl = reader.result; // base64
 
-      // Save descriptor + photo URL to profile
-      const res = await AuthAPI.updateProfile({ faceDescriptor: descriptor, facePhotoUrl });
+      const res = await AttendanceAPI.registerStudentFace(usn, { 
+        faceDescriptor: descriptor, 
+        facePhotoUrl 
+      });
+
       if (res.ok) {
-        const user = Storage.getUser();
-        user.faceRegistered = true;
-        Storage.setUser(user);
-        statusEl.textContent = '✅ Face registered successfully! Your attendance can now be tracked.';
+        statusEl.textContent = `✅ Successfully registered face for ${usn}!`;
         statusEl.className = 'face-reg-status success';
-        document.getElementById('face-preview-img').src = facePhotoUrl;
-        document.getElementById('face-preview-img').classList.remove('hidden');
-        showToast('Face registered!');
+        document.getElementById('t-face-preview-img').src = facePhotoUrl;
+        document.getElementById('t-face-preview-wrap').classList.remove('hidden');
+        showToast('Student face registered!');
+        usnInput.value = '';
+        photoInput.value = '';
       } else {
         statusEl.textContent = '❌ ' + (res.data.message || 'Failed to save face data.');
+        statusEl.className = 'face-reg-status error';
       }
     };
     reader.readAsDataURL(file);
   } catch (err) {
-    console.error('Face registration error:', err);
-    statusEl.textContent = '❌ Error processing photo. Try a clearer image.';
+    console.error('Teacher registration error:', err);
+    statusEl.textContent = '❌ Error processing photo. Try again.';
   }
 }
 
@@ -169,61 +179,89 @@ async function processGroupPhoto() {
       .filter(s => !matchedUSNs.has(s.usn))
       .map(s => ({ usn: s.usn, name: s.name }));
 
-    statusEl.textContent = `✅ Detected ${detections.length} faces · Matched ${matchedStudents.length} students · ${unmatchedCount} unrecognized`;
+    // Store results for manual toggling
+    window._currentPresent = matchedStudents;
+    window._currentAbsent = absentStudents;
+    window._unmatchedCount = unmatchedCount;
+    window._detectionsCount = detections.length;
 
-    // Render results
-    resultsEl.innerHTML = `
-      <div class="att-results-header">
-        <div class="att-result-stat present">
-          <div class="att-result-num">${matchedStudents.length}</div>
-          <div class="att-result-label">Present</div>
-        </div>
-        <div class="att-result-stat absent">
-          <div class="att-result-num">${absentStudents.length}</div>
-          <div class="att-result-label">Absent</div>
-        </div>
-        <div class="att-result-stat total">
-          <div class="att-result-num">${detections.length}</div>
-          <div class="att-result-label">Faces Found</div>
-        </div>
-      </div>
-
-      <div class="att-list-section">
-        <h4 style="color:var(--green);margin-bottom:0.5rem">✅ Present (${matchedStudents.length})</h4>
-        <div class="att-student-list">
-          ${matchedStudents.map(s => `
-            <div class="att-student-item present">
-              <span class="att-student-usn">${escapeHtml(s.usn)}</span>
-              <span class="att-student-name">${escapeHtml(s.name)}</span>
-              <span class="att-confidence">${Math.round(s.confidence * 100)}%</span>
-            </div>`).join('')}
-        </div>
-      </div>
-
-      ${absentStudents.length ? `
-      <div class="att-list-section" style="margin-top:1rem">
-        <h4 style="color:var(--accent);margin-bottom:0.5rem">❌ Absent (${absentStudents.length})</h4>
-        <div class="att-student-list">
-          ${absentStudents.map(s => `
-            <div class="att-student-item absent">
-              <span class="att-student-usn">${escapeHtml(s.usn)}</span>
-              <span class="att-student-name">${escapeHtml(s.name)}</span>
-            </div>`).join('')}
-        </div>
-      </div>` : ''}
-
-      <div style="display:flex;gap:0.75rem;margin-top:1.25rem;flex-wrap:wrap">
-        <button class="btn-primary" onclick="saveAttendance()">💾 Save Attendance</button>
-        <button class="btn-secondary" onclick="document.getElementById('attendance-results').innerHTML=''">Clear</button>
-      </div>`;
-
-    // Store absent for saving
-    window._absentStudents = absentStudents;
+    renderAttendanceResults();
 
   } catch (err) {
     console.error('Group photo processing error:', err);
     statusEl.textContent = '❌ Error processing photo: ' + err.message;
   }
+}
+
+function renderAttendanceResults() {
+  const resultsEl = document.getElementById('attendance-results');
+  const present = window._currentPresent || [];
+  const absent = window._currentAbsent || [];
+  
+  resultsEl.innerHTML = `
+    <div class="att-results-header">
+      <div class="att-result-stat present">
+        <div class="att-result-num">${present.length}</div>
+        <div class="att-result-label">Present</div>
+      </div>
+      <div class="att-result-stat absent">
+        <div class="att-result-num">${absent.length}</div>
+        <div class="att-result-label">Absent</div>
+      </div>
+      <div class="att-result-stat total">
+        <div class="att-result-num">${window._detectionsCount || 0}</div>
+        <div class="att-result-label">Faces Found</div>
+      </div>
+    </div>
+
+    <div class="att-list-section">
+      <h4 style="color:var(--green);margin-bottom:0.5rem">✅ Present (${present.length})</h4>
+      <div class="att-student-list">
+        ${present.map(s => `
+          <div class="att-student-item present">
+            <span class="att-student-usn">${escapeHtml(s.usn)}</span>
+            <span class="att-student-name">${escapeHtml(s.name)}</span>
+            <span class="att-confidence">${s.confidence ? Math.round(s.confidence * 100) + '%' : 'Manual'}</span>
+            <button class="att-toggle-btn" onclick="togglePresence('${s.usn}', false)" title="Mark as Absent">✕</button>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    ${absent.length ? `
+    <div class="att-list-section" style="margin-top:1rem">
+      <h4 style="color:var(--accent);margin-bottom:0.5rem">❌ Absent (${absent.length})</h4>
+      <div class="att-student-list">
+        ${absent.map(s => `
+          <div class="att-student-item absent">
+            <span class="att-student-usn">${escapeHtml(s.usn)}</span>
+            <span class="att-student-name">${escapeHtml(s.name)}</span>
+            <button class="att-toggle-btn" onclick="togglePresence('${s.usn}', true)" title="Mark as Present">✓</button>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    <div style="display:flex;gap:0.75rem;margin-top:1.25rem;flex-wrap:wrap">
+      <button class="btn-primary" onclick="saveAttendance()">💾 Save Attendance</button>
+      <button class="btn-secondary" onclick="document.getElementById('attendance-results').innerHTML=''">Clear</button>
+    </div>
+  `;
+}
+
+function togglePresence(usn, markPresent) {
+  if (markPresent) {
+    const student = window._currentAbsent.find(s => s.usn === usn);
+    if (student) {
+      window._currentAbsent = window._currentAbsent.filter(s => s.usn !== usn);
+      window._currentPresent.push({ ...student, confidence: null }); // null means manual
+    }
+  } else {
+    const student = window._currentPresent.find(s => s.usn === usn);
+    if (student) {
+      window._currentPresent = window._currentPresent.filter(s => s.usn !== usn);
+      window._currentAbsent.push({ usn: student.usn, name: student.name });
+    }
+  }
+  renderAttendanceResults();
 }
 
 async function saveAttendance() {
@@ -242,8 +280,8 @@ async function saveAttendance() {
       branch,
       section,
       subject: subject || 'General',
-      presentStudents: matchedStudents,
-      absentStudents: window._absentStudents || [],
+      presentStudents: window._currentPresent,
+      absentStudents: window._currentAbsent,
       method: 'face_recognition',
     });
 
@@ -273,6 +311,20 @@ async function loadMyAttendance() {
     }
 
     const { stats } = res.data;
+
+    // Update Student Verified Photo Section
+    const user = Storage.getUser();
+    if (user.role === 'student') {
+      const photoCard = document.getElementById('student-verified-photo-card');
+      if (photoCard) {
+        document.getElementById('student-official-name').textContent = user.name;
+        document.getElementById('student-official-usn').textContent = `USN: ${user.usn}`;
+        if (user.facePhotoUrl) {
+          document.getElementById('student-official-photo').src = user.facePhotoUrl;
+        }
+      }
+    }
+
     if (!stats || stats.totalClasses === 0) {
       container.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><h3>No attendance records yet</h3><p>Your teacher hasn\'t taken attendance yet.</p></div>';
       return;

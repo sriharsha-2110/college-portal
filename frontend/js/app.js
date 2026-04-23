@@ -61,7 +61,52 @@ function initDashboard(user) {
 
   // Load initial data
   loadDashboardStats();
+  checkProfileCompleteness(user);
   switchView('dashboard');
+}
+
+function checkProfileCompleteness(user) {
+  const banner = document.getElementById('dash-status-banner');
+  if (!banner) return;
+
+  let show = false;
+  let title = '';
+  let text = '';
+  let btnText = 'Fix Now';
+  let action = () => {};
+
+  if (user.role === 'student') {
+    if (!user.usn) {
+      show = true;
+      title = 'USN Required';
+      text = 'Please set your USN so teachers can link your marks and attendance.';
+      action = () => switchView('performance');
+    } else if (!user.facePhotoUrl) {
+      show = true;
+      title = 'Face Verification Pending';
+      text = 'Your official attendance photo is not set. Please visit your teacher to register.';
+      btnText = 'View Status';
+      action = () => switchView('my-attendance');
+    }
+  } else if (user.role === 'teacher') {
+    if (!user.designation) {
+      show = true;
+      title = 'Profile Incomplete';
+      text = 'Please set your designation in your profile settings.';
+      action = () => showToast('Update profile in settings (coming soon)');
+    }
+  }
+
+  if (show) {
+    banner.classList.remove('hidden');
+    document.getElementById('status-banner-title').textContent = title;
+    document.getElementById('status-banner-text').textContent = text;
+    const btn = document.getElementById('status-banner-btn');
+    btn.textContent = btnText;
+    btn.onclick = action;
+  } else {
+    banner.classList.add('hidden');
+  }
 }
 
 // ===== VIEW SWITCHING =====

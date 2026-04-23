@@ -284,4 +284,32 @@ router.delete('/:id', protect, authorize('teacher'), async (req, res) => {
   }
 });
 
+// PUT /api/attendance/register-face/:usn — register student face (Teacher only)
+router.put('/register-face/:usn', protect, authorize('teacher'), async (req, res) => {
+  try {
+    const { usn } = req.params;
+    const { faceDescriptor, facePhotoUrl } = req.body;
+
+    if (!faceDescriptor || !facePhotoUrl) {
+      return res.status(400).json({ success: false, message: 'Face data and photo are required.' });
+    }
+
+    const student = await User.findOne({ usn: usn.toUpperCase(), role: 'student' });
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found.' });
+    }
+
+    student.faceDescriptor = faceDescriptor;
+    student.facePhotoUrl = facePhotoUrl;
+    await student.save();
+
+    res.json({ 
+      success: true, 
+      message: `Face registered successfully for ${student.name} (${usn.toUpperCase()})` 
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;

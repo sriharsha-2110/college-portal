@@ -72,46 +72,61 @@ function hideMarksMessages() {
 // ─── LOOKUP EXISTING MARKS ───────────────────────────────────────────────────
 
 async function lookupUSN() {
-  const usn = document.getElementById('me-usn').value.trim().toUpperCase();
+  const usnInput = document.getElementById('me-usn');
+  const usn = usnInput.value.trim().toUpperCase();
   const sem = document.getElementById('me-semester').value;
   const year = document.getElementById('me-year').value.trim();
 
   if (!usn) { showMarksError('Please enter a USN first.'); return; }
 
   try {
+    // 1. Try to find existing marks to edit
     const res = await MarksAPI.getByUSN(usn);
-    if (!res.ok || !res.data.records.length) {
-      showMarksError(`No existing marks found for ${usn}.`);
+    if (res.ok && res.data.records && res.data.records.length > 0) {
+      let record = res.data.records[0];
+      if (sem || year) {
+        const match = res.data.records.find(r =>
+          (!sem || r.semester == sem) && (!year || r.academicYear === year)
+        );
+        if (match) record = match;
+      }
+
+      // Populate form for editing
+      editingMarksId = record._id;
+      document.getElementById('me-name').value = record.studentName;
+      document.getElementById('me-semester').value = record.semester;
+      document.getElementById('me-branch').value = record.branch;
+      document.getElementById('me-section').value = record.section;
+      document.getElementById('me-year').value = record.academicYear;
+      if (record.remarks) document.getElementById('me-remarks').value = record.remarks;
+
+      const tbody = document.getElementById('subjects-body');
+      tbody.innerHTML = '';
+      record.subjects.forEach(s => addSubjectRow(s));
+      
+      showToast(`Found existing marks for ${record.studentName}`);
+      document.getElementById('save-marks-btn').innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg> Update Marks`;
       return;
     }
 
-    // Find matching record by semester+year if provided
-    let record = res.data.records[0];
-    if (sem || year) {
-      const match = res.data.records.find(r =>
-        (!sem || r.semester == sem) && (!year || r.academicYear === year)
-      );
-      if (match) record = match;
+    // 2. If no marks found, try to find the student profile to auto-fill info
+    const userRes = await AuthAPI.getStudent(usn);
+    if (userRes.ok) {
+      const student = userRes.data.student;
+      document.getElementById('me-name').value = student.name;
+      document.getElementById('me-semester').value = student.semester;
+      document.getElementById('me-branch').value = student.branch;
+      document.getElementById('me-section').value = student.section;
+      
+      showToast(`Found student: ${student.name}. Details auto-filled!`);
+      // Keep editingMarksId as null for new entry
+      editingMarksId = null;
+    } else {
+      showMarksError(`No record found for USN ${usn}. If this is a new student, please enter details manually or verify USN.`);
     }
 
-    // Populate form
-    editingMarksId = record._id;
-    document.getElementById('me-usn').value = record.usn;
-    document.getElementById('me-name').value = record.studentName;
-    document.getElementById('me-semester').value = record.semester;
-    document.getElementById('me-branch').value = record.branch;
-    document.getElementById('me-section').value = record.section;
-    document.getElementById('me-year').value = record.academicYear;
-    if (record.remarks) document.getElementById('me-remarks').value = record.remarks;
-
-    // Populate subject rows
-    document.getElementById('subjects-body').innerHTML = '';
-    record.subjects.forEach(s => addSubjectRow(s));
-
-    showMarksSuccess(`Loaded existing record (Sem ${record.semester}, ${record.academicYear}). Editing mode active.`);
-    document.getElementById('save-marks-btn').innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg> Update Marks`;
   } catch (err) {
-    showMarksError('Failed to load existing marks.');
+    showMarksError('Search failed.');
   }
 }
 
