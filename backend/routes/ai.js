@@ -2,24 +2,59 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 
-async function callClaude(systemPrompt, messages, maxTokens = 2000) {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.CLAUDE_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages,
-    }),
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || 'Claude API error');
-  return data.content[0].text;
+async function callAI(systemPrompt, messages, maxTokens = 2000) {
+  // If Gemini API key is available, use Gemini
+  if (process.env.GEMINI_API_KEY) {
+    const geminiMessages = messages.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }));
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        contents: geminiMessages,
+        generationConfig: {
+          maxOutputTokens: maxTokens
+        }
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message || 'Gemini API error');
+    return data.candidates[0].content.parts[0].text;
+  }
+
+  // Fallback to OpenAI
+  if (process.env.OPENAI_API_KEY) {
+    const formattedMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages
+    ];
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        max_tokens: maxTokens,
+        messages: formattedMessages
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message || 'OpenAI API error');
+    return data.choices[0].message.content;
+  }
+
+  throw new Error('No AI API key configured. Please set GEMINI_API_KEY or OPENAI_API_KEY in .env');
 }
 
 // POST /api/ai/generate-notes — Teacher only
@@ -65,7 +100,7 @@ Branch: ${branch || 'Not specified'}
 Make the notes comprehensive, well-structured, and exam-ready. Follow the exact syllabus topic coverage that the teacher has described. If the teacher has pasted their syllabus module, cover all subtopics mentioned.`
     }];
 
-    const content = await callClaude(system, messages, 3000);
+    const content = await callAI(system, messages, 3000);
     res.json({ success: true, content });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -90,7 +125,7 @@ ${subject ? `They are currently studying: ${subject}.` : ''}
 - For numerical problems, show step-by-step solutions
 - Keep responses focused and not too long`;
 
-    const reply = await callClaude(system, messages, 1000);
+    const reply = await callAI(system, messages, 1000);
     res.json({ success: true, reply });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

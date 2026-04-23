@@ -27,6 +27,11 @@ const attendanceSchema = new mongoose.Schema(
       trim: true,
       default: 'General',
     },
+    duration: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     // Students marked present (from face recognition)
     presentStudents: [
       {

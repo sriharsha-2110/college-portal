@@ -7,7 +7,7 @@ const { protect, authorize } = require('../middleware/auth');
 // POST /api/attendance — save attendance record (Teacher only)
 router.post('/', protect, authorize('teacher'), async (req, res) => {
   try {
-    const { date, semester, branch, section, subject, presentStudents, absentStudents, groupPhotoUrl, method } = req.body;
+    const { date, semester, branch, section, subject, duration, presentStudents, absentStudents, groupPhotoUrl, method } = req.body;
 
     if (!date || !semester || !branch || !section) {
       return res.status(400).json({ success: false, message: 'Date, semester, branch, and section are required.' });
@@ -19,6 +19,7 @@ router.post('/', protect, authorize('teacher'), async (req, res) => {
       branch,
       section,
       subject: subject || 'General',
+      duration: duration || '',
       presentStudents: presentStudents || [],
       absentStudents: absentStudents || [],
       totalPresent: (presentStudents || []).length,
@@ -160,6 +161,7 @@ router.get('/my', protect, async (req, res) => {
 
     res.json({
       success: true,
+      facePhotoUrl: req.user.facePhotoUrl,
       stats: {
         totalClasses,
         attended,
