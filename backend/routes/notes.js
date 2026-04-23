@@ -237,19 +237,13 @@ router.get('/:id/download', protect, async (req, res) => {
     note.downloadCount += 1;
     await note.save();
 
-    // Use the original URL from the database
-    let targetUrl = note.fileUrl;
-
-    // For Images and PDFs, try to force download using Cloudinary's attachment flag
-    // We only do this if it's not a 'raw' file, as raw files don't support fl_attachment
-    if (!targetUrl.includes('fl_attachment') && !targetUrl.includes('/raw/')) {
-       targetUrl = targetUrl.replace('/upload/', '/upload/fl_attachment/');
-    }
+    // Use the original URL from the database as-is
+    const targetUrl = note.fileUrl;
 
     console.log(`Streaming note: ${note.fileName}`);
-    console.log(`URL: ${targetUrl.substring(0, 70)}...`);
+    console.log(`Source URL: ${targetUrl.substring(0, 70)}...`);
 
-    // Stream the file directly using our robust helper
+    // Stream the file directly
     streamFile(targetUrl, res, note.fileName);
 
   } catch (error) {
