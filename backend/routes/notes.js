@@ -99,109 +99,58 @@ router.get('/', protect, async (req, res) => {
 
     res.json({
       success: true,
-      total,
-      page: parseInt(page),
-      pages: Math.ceil(total / parseInt(limit)),
       notes,
+      pagination: {
+        total,
+        page: parseInt(page),
+        pages: Math.ceil(total / parseInt(limit)),
+      },
     });
   } catch (error) {
+    console.error('Fetch notes error:', error);
     res.status(500).json({ success: false, message: 'Server error fetching notes.' });
   }
 });
 
-// @route   GET /api/notes/my
-// @desc    Get notes uploaded by logged-in teacher
-// @access  Private/Teacher
-router.get('/my', protect, authorize('teacher'), async (req, res) => {
-  try {
-    const { page = 1, limit = 12 } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    const total = await Note.countDocuments({ uploadedBy: req.user.id, isActive: true });
-    const notes = await Note.find({ uploadedBy: req.user.id, isActive: true })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-
-    res.json({ success: true, total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)), notes });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error.' });
-  }
-});
-
 // @route   GET /api/notes/stats
-// @desc    Get dashboard stats
+// @desc    Get notes stats
 // @access  Private
 router.get('/stats', protect, async (req, res) => {
   try {
-    if (req.user.role === 'teacher') {
-      const totalUploaded = await Note.countDocuments({ uploadedBy: req.user.id, isActive: true });
-      const totalDownloads = await Note.aggregate([
-        { $match: { uploadedBy: req.user._id, isActive: true } },
-        { $group: { _id: null, total: { $sum: '$downloadCount' } } },
-      ]);
-      const subjectBreakdown = await Note.aggregate([
-        { $match: { uploadedBy: req.user._id, isActive: true } },
-        { $group: { _id: '$subject', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 5 },
-      ]);
-      const recentNotes = await Note.find({ uploadedBy: req.user.id, isActive: true })
-        .sort({ createdAt: -1 })
-        .limit(5);
-
-      return res.json({
-        success: true,
-        stats: {
-          totalUploaded,
-          totalDownloads: totalDownloads[0]?.total || 0,
-          subjectBreakdown,
-          recentNotes,
-        },
-      });
-    }
-
-    // Student stats
-    const filter = {
-      isActive: true,
-      semester: req.user.semester,
-      branch: { $in: [req.user.branch, 'ALL'] },
-      section: { $in: [req.user.section, 'ALL'] },
-    };
-    const totalAvailable = await Note.countDocuments(filter);
-    const subjectBreakdown = await Note.aggregate([
-      { $match: filter },
-      { $group: { _id: '$subject', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-    ]);
-    const recentNotes = await Note.find(filter)
-      .populate('uploadedBy', 'name')
+    const totalNotes = await Note.countDocuments({ isActive: true });
+    const userNotes = await Note.countDocuments({ uploadedBy: req.user.id, isActive: true });
+    
+    // Get recent notes
+    const recentNotes = await Note.find({ isActive: true })
       .sort({ createdAt: -1 })
-      .limit(5);
+      .limit(5)
+      .select('title subject fileName fileType createdAt');
 
     res.json({
       success: true,
-      stats: { totalAvailable, subjectBreakdown, recentNotes },
+      stats: {
+        totalNotes,
+        userNotes,
+        recentNotes
+      }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error.' });
+    res.status(500).json({ success: false, message: 'Stats error.' });
   }
 });
 
 // @route   GET /api/notes/:id
-// @desc    Get single note (increments view count)
+// @desc    Get single note details
 // @access  Private
 router.get('/:id', protect, async (req, res) => {
   try {
-    const note = await Note.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { viewCount: 1 } },
-      { new: true }
-    ).populate('uploadedBy', 'name email department designation');
-
+    const note = await Note.findById(req.params.id).populate('uploadedBy', 'name email department designation');
     if (!note || !note.isActive) {
       return res.status(404).json({ success: false, message: 'Note not found.' });
     }
+
+    note.viewCount += 1;
+    await note.save();
 
     res.json({ success: true, note });
   } catch (error) {
@@ -209,125 +158,46 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
-// @route   POST /api/notes/:id/download
-// @desc    Increment download count
-// @access  Private
-router.post('/:id/download', protect, async (req, res) => {
-  try {
-    const note = await Note.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { downloadCount: 1 } },
-      { new: true }
-    );
-    if (!note) return res.status(404).json({ success: false, message: 'Note not found.' });
-    res.json({ success: true, downloadCount: note.downloadCount });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error.' });
-  }
-});
-
-// @route   PUT /api/notes/:id
-// @desc    Update note details (Teacher who uploaded only)
-// @access  Private/Teacher
-router.put('/:id', protect, authorize('teacher'), async (req, res) => {
-  try {
-    const note = await Note.findById(req.params.id);
-    if (!note || !note.isActive) {
-      return res.status(404).json({ success: false, message: 'Note not found.' });
-    }
-    if (note.uploadedBy.toString() !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Not authorized to edit this note.' });
-    }
-
-    const { title, description, subject, semester, branch, section, tags } = req.body;
-    const updates = {};
-    if (title) updates.title = title;
-    if (description !== undefined) updates.description = description;
-    if (subject) updates.subject = subject;
-    if (semester) updates.semester = parseInt(semester);
-    if (branch) updates.branch = branch;
-    if (section) updates.section = section;
-    if (tags !== undefined) updates.tags = tags.split(',').map((t) => t.trim()).filter(Boolean);
-
-    const updated = await Note.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true })
-      .populate('uploadedBy', 'name email department');
-
-    res.json({ success: true, message: 'Note updated successfully.', note: updated });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error.' });
-  }
-});
-
 // @route   DELETE /api/notes/:id
-// @desc    Delete a note (Teacher who uploaded only)
+// @desc    Delete a note
 // @access  Private/Teacher
 router.delete('/:id', protect, authorize('teacher'), async (req, res) => {
   try {
     const note = await Note.findById(req.params.id);
-    if (!note || !note.isActive) {
-      return res.status(404).json({ success: false, message: 'Note not found.' });
-    }
-    if (note.uploadedBy.toString() !== req.user.id) {
+    if (!note) return res.status(404).json({ success: false, message: 'Note not found.' });
+
+    // Only allow uploader or admin to delete
+    if (note.uploadedBy.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this note.' });
     }
 
-    // Delete from Cloudinary
+    // Delete from Cloudinary if public ID exists
     if (note.filePublicId) {
-      try {
-        await cloudinary.uploader.destroy(note.filePublicId, { resource_type: 'raw' });
-      } catch (cloudErr) {
-        console.warn('Cloudinary deletion failed:', cloudErr.message);
-      }
+      // Determine resource type from URL if not stored
+      const resourceType = note.fileUrl.includes('/raw/') ? 'raw' : 'image';
+      await cloudinary.uploader.destroy(note.filePublicId, { resource_type: resourceType });
     }
 
-    note.isActive = false;
-    await note.save();
+    await Note.findByIdAndDelete(req.params.id);
 
     res.json({ success: true, message: 'Note deleted successfully.' });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error.' });
-  }
-});
-// @route   GET /api/notes/:id/file
-// @desc    Get download URL for a note file (JSON)
-// @access  Private
-router.get('/:id/file', protect, async (req, res) => {
-  try {
-    const note = await Note.findById(req.params.id);
-    if (!note || !note.isActive) {
-      return res.status(404).json({ success: false, message: 'Note not found.' });
-    }
-
-    // Increment download count
-    note.downloadCount += 1;
-    await note.save();
-
-    const fileUrl = note.fileUrl;
-    res.json({ success: true, url: fileUrl, fileName: note.fileName });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Download failed.' });
+    res.status(500).json({ success: false, message: 'Delete failed.' });
   }
 });
 
 const https = require('https');
 const http = require('http');
 
-// Helper to follow redirects and stream
+// Universal streaming helper with redirect support
 const streamFile = (url, res, fileName, retryCount = 0) => {
-  if (retryCount > 5) {
-    return res.status(500).send('Too many redirects');
-  }
+  if (retryCount > 5) return res.status(500).send('Too many redirects');
 
   const client = url.startsWith('https') ? https : http;
-  
-  const options = {
-    headers: {
-      'User-Agent': 'College-Portal-Backend/1.0'
-    }
-  };
+  const options = { headers: { 'User-Agent': 'College-Portal-Backend/1.0' } };
 
   client.get(url, options, (proxyRes) => {
-    // Handle redirects
+    // Handle Redirects
     if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
       let redirectUrl = proxyRes.headers.location;
       if (!redirectUrl.startsWith('http')) {
@@ -338,22 +208,16 @@ const streamFile = (url, res, fileName, retryCount = 0) => {
     }
 
     if (proxyRes.statusCode !== 200) {
-      console.error(`Cloudinary Error: Status ${proxyRes.statusCode} for URL ${url}`);
-      // Send more info if possible
-      return res.status(proxyRes.statusCode).send(`Error fetching file: Storage returned ${proxyRes.statusCode}`);
+      console.error(`Fetch failed: ${proxyRes.statusCode} for ${url}`);
+      return res.status(proxyRes.statusCode).send(`Storage error: ${proxyRes.statusCode}`);
     }
 
-    // Set headers
+    // Set headers for download
     const safeFileName = encodeURIComponent(fileName).replace(/['()]/g, escape).replace(/\*/g, '%2A');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName.replace(/"/g, '')}"; filename*=UTF-8''${safeFileName}`);
+    if (proxyRes.headers['content-type']) res.setHeader('Content-Type', proxyRes.headers['content-type']);
+    if (proxyRes.headers['content-length']) res.setHeader('Content-Length', proxyRes.headers['content-length']);
     
-    if (proxyRes.headers['content-type']) {
-      res.setHeader('Content-Type', proxyRes.headers['content-type']);
-    }
-    if (proxyRes.headers['content-length']) {
-      res.setHeader('Content-Length', proxyRes.headers['content-length']);
-    }
-
     proxyRes.pipe(res);
   }).on('error', (err) => {
     console.error('Streaming error:', err);
@@ -362,7 +226,7 @@ const streamFile = (url, res, fileName, retryCount = 0) => {
 };
 
 // @route   GET /api/notes/:id/download
-// @desc    Direct download stream
+// @desc    Direct download stream with auto-fallback
 // @access  Private
 router.get('/:id/download', protect, async (req, res) => {
   try {
@@ -372,41 +236,45 @@ router.get('/:id/download', protect, async (req, res) => {
     note.downloadCount += 1;
     await note.save();
 
-    // Determine resource type and version by checking the stored URL
-    const fileUrl = note.fileUrl;
-    let resourceType = 'raw';
-    if (fileUrl.includes('/image/')) resourceType = 'image';
-    else if (fileUrl.includes('/video/')) resourceType = 'video';
-    else if (fileUrl.includes('/raw/')) resourceType = 'raw';
-    
-    const versionMatch = fileUrl.match(/\/v(\d+)\//);
+    const versionMatch = note.fileUrl.match(/\/v(\d+)\//);
     const version = versionMatch ? versionMatch[1] : null;
 
-    console.log(`Detected resource type: ${resourceType}, version: ${version} from URL: ${fileUrl}`);
+    // TRY 1: Try as 'image' (Cloudinary's default for many PDFs)
+    let signedUrl = cloudinary.url(note.filePublicId, {
+      resource_type: 'image',
+      type: 'upload',
+      version: version,
+      sign_url: true,
+      secure: true
+    });
 
-    // Generate a SIGNED URL using the SDK - this fixes the 401 Unauthorized issue
-    let signedUrl;
-    try {
-      signedUrl = cloudinary.url(note.filePublicId, {
-        resource_type: resourceType,
-        type: 'upload',
-        version: version, // provide the correct version
-        sign_url: true,
-        secure: true
-      });
-    } catch (urlErr) {
-      console.error('Error generating signed URL:', urlErr);
-      return res.status(500).send('Error generating download link');
-    }
+    console.log(`Attempting download (Image Type): ${note.fileName}`);
 
-    console.log(`Starting signed download stream for: ${note.fileName}`);
-    console.log(`Signed URL: ${signedUrl}`);
-    
-    streamFile(signedUrl, res, note.fileName || 'file');
+    const client = signedUrl.startsWith('https') ? https : http;
+    client.get(signedUrl, { headers: { 'User-Agent': 'College-Portal' } }, (proxyRes) => {
+      if (proxyRes.statusCode === 200) {
+        // Success! Stream it.
+        streamFile(signedUrl, res, note.fileName);
+      } else {
+        // TRY 2: Fallback to 'raw' if image fails
+        console.log(`Image fetch failed (${proxyRes.statusCode}), trying Raw Type...`);
+        const rawUrl = cloudinary.url(note.filePublicId, {
+          resource_type: 'raw',
+          type: 'upload',
+          version: version,
+          sign_url: true,
+          secure: true
+        });
+        streamFile(rawUrl, res, note.fileName);
+      }
+    }).on('error', (err) => {
+      console.error('Initial fetch connection error:', err);
+      if (!res.headersSent) res.status(500).send('Connection error');
+    });
 
   } catch (error) {
-    console.error('Download error:', error);
-    if (!res.headersSent) res.status(500).send('Server error during download');
+    console.error('Download route error:', error);
+    if (!res.headersSent) res.status(500).send('Server error');
   }
 });
 
