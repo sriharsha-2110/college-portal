@@ -11,10 +11,17 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => {
+    // Force PDFs and common docs to be 'raw' to avoid 401 Image errors
+    const isRaw = !file.mimetype.startsWith('image/');
+    
+    // Clean the filename: remove extension from public_id to avoid double extensions
+    const cleanName = file.originalname.split('.').slice(0, -1).join('.') || file.originalname;
+    const publicId = `${Date.now()}-${cleanName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '')}`;
+
     return {
       folder: `college-portal/notes/${req.body.branch || 'general'}`,
-      resource_type: 'auto',
-      public_id: `${Date.now()}-${file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '')}`,
+      resource_type: isRaw ? 'raw' : 'image',
+      public_id: publicId,
     };
   },
 });

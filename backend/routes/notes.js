@@ -226,7 +226,7 @@ const streamFile = (url, res, fileName, retryCount = 0) => {
 };
 
 // @route   GET /api/notes/:id/download
-// @desc    Simplified direct download stream
+// @desc    Direct download stream with fail-safe redirect fallback
 // @access  Private
 router.get('/:id/download', protect, async (req, res) => {
   try {
@@ -237,14 +237,38 @@ router.get('/:id/download', protect, async (req, res) => {
     note.downloadCount += 1;
     await note.save();
 
-    // Use the original URL from the database as-is
-    const targetUrl = note.fileUrl;
+    // Determine the correct resource type and version for signing
+    const resourceType = note.fileUrl.includes('/raw/') ? 'raw' : 'image';
+    const versionMatch = note.fileUrl.match(/\/v(\d+)\//);
+    const version = versionMatch ? versionMatch[1] : null;
 
-    console.log(`Streaming note: ${note.fileName}`);
-    console.log(`Source URL: ${targetUrl.substring(0, 70)}...`);
+    // Generate a SIGNED URL to bypass the 401 Unauthorized error
+    const signedUrl = cloudinary.url(note.filePublicId, {
+      resource_type: resourceType,
+      type: 'upload',
+      version: version,
+      sign_url: true,
+      secure: true
+    });
 
-    // Stream the file directly
-    streamFile(targetUrl, res, note.fileName);
+    console.log(`[v6-Final] Streaming attempt: ${note.fileName} (${resourceType})`);
+    const targetUrl = signedUrl;
+
+    // Try to stream first
+    const client = targetUrl.startsWith('https') ? https : http;
+    client.get(targetUrl, { headers: { 'User-Agent': 'College-Portal-Backend/1.0' } }, (proxyRes) => {
+      // If streaming is possible, do it
+      if (proxyRes.statusCode === 200) {
+        return streamFile(targetUrl, res, note.fileName);
+      } 
+      
+      // If server-side fetch fails (404/401/etc), redirect the browser to the file directly
+      console.log(`Streaming fetch failed with ${proxyRes.statusCode}, using browser redirect fallback.`);
+      res.redirect(targetUrl);
+    }).on('error', (err) => {
+      console.error('Streaming connection error, falling back to redirect:', err);
+      if (!res.headersSent) res.redirect(targetUrl);
+    });
 
   } catch (error) {
     console.error('Download route error:', error);
