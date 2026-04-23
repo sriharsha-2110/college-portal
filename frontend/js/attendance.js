@@ -163,10 +163,12 @@ async function processGroupPhoto() {
         const [usn, name] = match.label.split('|');
         if (!matchedUSNs.has(usn)) {
           matchedUSNs.add(usn);
+          const studentInfo = registeredStudents.find(s => s.usn === usn);
           matchedStudents.push({
             usn,
             name,
             confidence: parseFloat((1 - match.distance).toFixed(2)),
+            facePhotoUrl: studentInfo?.facePhotoUrl || null
           });
         }
       } else {
@@ -177,7 +179,7 @@ async function processGroupPhoto() {
     // Find absent students (registered but not matched)
     const absentStudents = registeredStudents
       .filter(s => !matchedUSNs.has(s.usn))
-      .map(s => ({ usn: s.usn, name: s.name }));
+      .map(s => ({ usn: s.usn, name: s.name, facePhotoUrl: s.facePhotoUrl }));
 
     // Store results for manual toggling
     window._currentPresent = matchedStudents;
@@ -218,7 +220,8 @@ function renderAttendanceResults() {
       <h4 style="color:var(--green);margin-bottom:0.5rem">✅ Present (${present.length})</h4>
       <div class="att-student-list">
         ${present.map(s => `
-          <div class="att-student-item present">
+          <div class="att-student-item present" style="display:flex;align-items:center;gap:0.75rem">
+            ${s.facePhotoUrl ? `<img src="${s.facePhotoUrl}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--green)"/>` : `<div style="width:28px;height:28px;border-radius:50%;background:var(--green);opacity:0.2"></div>`}
             <span class="att-student-usn">${escapeHtml(s.usn)}</span>
             <span class="att-student-name">${escapeHtml(s.name)}</span>
             <span class="att-confidence">${s.confidence ? Math.round(s.confidence * 100) + '%' : 'Manual'}</span>
@@ -232,7 +235,8 @@ function renderAttendanceResults() {
       <h4 style="color:var(--accent);margin-bottom:0.5rem">❌ Absent (${absent.length})</h4>
       <div class="att-student-list">
         ${absent.map(s => `
-          <div class="att-student-item absent">
+          <div class="att-student-item absent" style="display:flex;align-items:center;gap:0.75rem">
+            ${s.facePhotoUrl ? `<img src="${s.facePhotoUrl}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--accent);filter:grayscale(100%)"/>` : `<div style="width:28px;height:28px;border-radius:50%;background:var(--accent);opacity:0.2"></div>`}
             <span class="att-student-usn">${escapeHtml(s.usn)}</span>
             <span class="att-student-name">${escapeHtml(s.name)}</span>
             <button class="att-toggle-btn" onclick="togglePresence('${s.usn}', true)" title="Mark as Present">✓</button>
@@ -258,7 +262,7 @@ function togglePresence(usn, markPresent) {
     const student = window._currentPresent.find(s => s.usn === usn);
     if (student) {
       window._currentPresent = window._currentPresent.filter(s => s.usn !== usn);
-      window._currentAbsent.push({ usn: student.usn, name: student.name });
+      window._currentAbsent.push({ usn: student.usn, name: student.name, facePhotoUrl: student.facePhotoUrl });
     }
   }
   renderAttendanceResults();
@@ -269,6 +273,7 @@ async function saveAttendance() {
   const branch = document.getElementById('att-branch').value;
   const section = document.getElementById('att-section').value;
   const subject = document.getElementById('att-subject').value.trim();
+  const duration = document.getElementById('att-duration')?.value.trim() || '';
   const date = document.getElementById('att-date').value;
 
   if (!date) { showToast('Please select a date.', 'error'); return; }
@@ -280,6 +285,7 @@ async function saveAttendance() {
       branch,
       section,
       subject: subject || 'General',
+      duration,
       presentStudents: window._currentPresent,
       absentStudents: window._currentAbsent,
       method: 'face_recognition',
@@ -319,7 +325,17 @@ async function loadMyAttendance() {
       if (photoCard) {
         document.getElementById('student-official-name').textContent = user.name;
         document.getElementById('student-official-usn').textContent = `USN: ${user.usn}`;
-        if (user.facePhotoUrl) {
+        if (res.data.facePhotoUrl) {
+          document.getElementById('student-official-photo').src = res.data.facePhotoUrl;
+          
+          if (!user.facePhotoUrl) {
+            user.facePhotoUrl = res.data.facePhotoUrl;
+            Storage.setUser(user);
+            if (typeof checkProfileCompleteness === 'function') {
+              checkProfileCompleteness(user);
+            }
+          }
+        } else if (user.facePhotoUrl) {
           document.getElementById('student-official-photo').src = user.facePhotoUrl;
         }
       }

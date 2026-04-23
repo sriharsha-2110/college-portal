@@ -6,6 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (token && user) {
     initDashboard(user);
+    
+    // Silently refresh user data to catch updates like face registration
+    if (typeof AuthAPI !== 'undefined' && AuthAPI.me) {
+      AuthAPI.me().then(res => {
+        if (res && res.ok && res.data && res.data.user) {
+          Storage.setUser(res.data.user);
+          checkProfileCompleteness(res.data.user);
+        }
+      }).catch(err => console.error('Silent user refresh failed:', err));
+    }
   } else {
     document.getElementById('auth-page').classList.add('active');
     document.getElementById('dashboard-page').classList.remove('active');

@@ -134,7 +134,8 @@ async function sendChatMessage() {
       appendChatMessage(reply, 'ai');
       chatHistory.push({ role: 'assistant', content: reply });
     } else {
-      appendChatMessage('Sorry, I could not answer that. Please try again.', 'ai');
+      console.error('AI Error:', res.data);
+      appendChatMessage('Sorry, I could not answer that. Reason: ' + (res.data?.message || 'Unknown error'), 'ai');
     }
   } catch (err) {
     typingEl.remove();

@@ -302,37 +302,116 @@ function renderClassReport(records, stats, params) {
     </div>` : ''}
 
     <!-- Academic Categorization (Clustering) -->
-    <div class="cr-section-title" style="margin-top:2rem">📈 Academic Categorization</div>
-    <div class="categorization-grid">
-      <div class="cat-card achievers">
-        <div class="cat-header">
-          <div class="cat-icon">🚀</div>
-          <div class="cat-info">
-            <div class="cat-title">High Achievers</div>
-            <div class="cat-count">${records.filter(r => r.analytics.cgpa >= 8.5).length} Students</div>
-          </div>
-        </div>
-        <div class="cat-desc">CGPA ≥ 8.5. Consistently performing at the top of the class.</div>
+    <div class="cr-section-title" style="margin-top:2rem">📈 Academic Categorization Model</div>
+    
+    <style>
+      .ds-layout { display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap; margin-top: 1rem; }
+      .ds-chart-container { flex: 0 0 auto; background: var(--surface); padding: 1.5rem; border-radius: 1rem; border: 1px solid var(--border); text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto; }
+      .ds-cards-container { flex: 1 1 300px; display: flex; flex-direction: column; gap: 1rem; }
+      .cat-card { cursor: pointer; transition: all 0.2s; border: 1px solid var(--border); position: relative; overflow: hidden; }
+      .cat-card:hover { transform: translateY(-2px); border-color: var(--gold); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+      .cat-usns { margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border); font-size: 0.85rem; }
+      .cat-usns.hidden { display: none; }
+      .cat-usns-title { font-weight: 600; color: var(--text-2); margin-bottom: 0.5rem; }
+      .cat-usns-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+      .usn-badge { background: var(--surface-2); color: var(--ink); padding: 0.2rem 0.5rem; border-radius: 4px; font-family: var(--font-mono); font-size: 0.75rem; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+      .ds-legend { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1rem; justify-content: center; }
+      .ds-legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; color: var(--text-2); }
+      .ds-dot { width: 8px; height: 8px; border-radius: 50%; }
+      .ds-donut circle { transition: stroke-dasharray 0.5s ease; }
+    </style>
+
+    <div class="ds-layout">
+      <!-- Data Science Pie Chart -->
+      <div class="ds-chart-container">
+        ${(function(){
+          const achieversCount = records.filter(r => r.analytics.cgpa >= 8.5).length;
+          const consistentCount = records.filter(r => r.analytics.cgpa < 8.5 && r.analytics.cgpa >= 6.5 && r.analytics.passedAll).length;
+          const atRiskCount = records.filter(r => r.analytics.backlogs > 0 || r.analytics.cgpa < 5.5).length;
+          const othersCount = records.length - achieversCount - consistentCount - atRiskCount;
+          let offset = 25;
+          const segs = [
+            { count: achieversCount, color: '#16a34a', label: 'Achievers' },
+            { count: consistentCount, color: '#2563eb', label: 'Consistent' },
+            { count: atRiskCount, color: '#dc2626', label: 'At Risk' },
+            { count: othersCount, color: '#d97706', label: 'Average' }
+          ];
+          let svg = '<svg width="180" height="180" viewBox="0 0 42 42" class="ds-donut">';
+          svg += '<circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="var(--border)" stroke-width="6"></circle>';
+          segs.forEach(seg => {
+            if(seg.count === 0) return;
+            const pct = (seg.count / records.length) * 100;
+            svg += `<circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="${seg.color}" stroke-width="6" stroke-dasharray="${pct} ${100 - pct}" stroke-dashoffset="${offset}"></circle>`;
+            offset -= pct;
+          });
+          svg += `<text x="21" y="21" text-anchor="middle" dy="2" font-size="6" font-weight="bold" fill="var(--ink)">${records.length}</text>`;
+          svg += `<text x="21" y="21" text-anchor="middle" dy="6" font-size="2.5" fill="var(--text-3)">Total</text>`;
+          svg += '</svg>';
+          
+          let legend = '<div class="ds-legend">';
+          segs.forEach(seg => {
+            legend += `<div class="ds-legend-item"><span class="ds-dot" style="background:${seg.color}"></span>${seg.label} (${Math.round(seg.count/records.length*100)}%)</div>`;
+          });
+          legend += '</div>';
+          return svg + legend;
+        })()}
       </div>
-      <div class="cat-card consistent">
-        <div class="cat-header">
-          <div class="cat-icon">⚖️</div>
-          <div class="cat-info">
-            <div class="cat-title">Consistent</div>
-            <div class="cat-count">${records.filter(r => r.analytics.cgpa < 8.5 && r.analytics.cgpa >= 6.5 && r.analytics.passedAll).length} Students</div>
-          </div>
-        </div>
-        <div class="cat-desc">CGPA 6.5 - 8.5 with no backlogs. Steady performance.</div>
-      </div>
-      <div class="cat-card at-risk">
-        <div class="cat-header">
-          <div class="cat-icon">🎯</div>
-          <div class="cat-info">
-            <div class="cat-title">Needs Attention</div>
-            <div class="cat-count">${records.filter(r => r.analytics.backlogs > 0 || r.analytics.cgpa < 5.5).length} Students</div>
-          </div>
-        </div>
-        <div class="cat-desc">Have backlogs or CGPA < 5.5. May require academic counseling.</div>
+
+      <!-- Categories with clickable USNs -->
+      <div class="ds-cards-container">
+        ${(function(){
+          const achievers = records.filter(r => r.analytics.cgpa >= 8.5);
+          const consistent = records.filter(r => r.analytics.cgpa < 8.5 && r.analytics.cgpa >= 6.5 && r.analytics.passedAll);
+          const atRisk = records.filter(r => r.analytics.backlogs > 0 || r.analytics.cgpa < 5.5);
+          
+          const renderUSNs = (arr) => {
+            if(arr.length === 0) return '<div class="cat-usns hidden">No students in this category.</div>';
+            return `<div class="cat-usns hidden">
+              <div class="cat-usns-title">Students (USNs):</div>
+              <div class="cat-usns-list">
+                ${arr.map(r => `<span class="usn-badge">${escapeHtml(r.usn)}</span>`).join('')}
+              </div>
+            </div>`;
+          };
+
+          return `
+            <div class="cat-card achievers" onclick="this.querySelector('.cat-usns').classList.toggle('hidden')">
+              <div class="cat-header">
+                <div class="cat-icon">🚀</div>
+                <div class="cat-info">
+                  <div class="cat-title">High Achievers</div>
+                  <div class="cat-count">${achievers.length} Students</div>
+                </div>
+              </div>
+              <div class="cat-desc">CGPA ≥ 8.5. Consistently performing at the top of the class. <strong style="color:var(--text-3);font-size:0.75rem;margin-left:0.5rem">Click to view USNs ↓</strong></div>
+              ${renderUSNs(achievers)}
+            </div>
+            
+            <div class="cat-card consistent" onclick="this.querySelector('.cat-usns').classList.toggle('hidden')">
+              <div class="cat-header">
+                <div class="cat-icon">⚖️</div>
+                <div class="cat-info">
+                  <div class="cat-title">Consistent</div>
+                  <div class="cat-count">${consistent.length} Students</div>
+                </div>
+              </div>
+              <div class="cat-desc">CGPA 6.5 - 8.5 with no backlogs. Steady performance. <strong style="color:var(--text-3);font-size:0.75rem;margin-left:0.5rem">Click to view USNs ↓</strong></div>
+              ${renderUSNs(consistent)}
+            </div>
+            
+            <div class="cat-card at-risk" onclick="this.querySelector('.cat-usns').classList.toggle('hidden')">
+              <div class="cat-header">
+                <div class="cat-icon">🎯</div>
+                <div class="cat-info">
+                  <div class="cat-title">Needs Attention</div>
+                  <div class="cat-count">${atRisk.length} Students</div>
+                </div>
+              </div>
+              <div class="cat-desc">Have backlogs or CGPA < 5.5. May require academic counseling. <strong style="color:var(--text-3);font-size:0.75rem;margin-left:0.5rem">Click to view USNs ↓</strong></div>
+              ${renderUSNs(atRisk)}
+            </div>
+          `;
+        })()}
       </div>
     </div>
 

@@ -693,15 +693,21 @@
 
       <div class="upload-card">
         <div class="marks-section-title">Class Details</div>
-        <div class="form-row three">
+        <div class="form-row">
           <div class="form-group">
             <label>Date <span class="req">*</span></label>
             <input type="date" id="att-date" />
           </div>
           <div class="form-group">
+            <label>Time Duration</label>
+            <input type="text" id="att-duration" placeholder="e.g. 10:00 AM - 11:00 AM" />
+          </div>
+          <div class="form-group">
             <label>Subject</label>
             <input type="text" id="att-subject" placeholder="e.g. Data Structures" />
           </div>
+        </div>
+        <div class="form-row three">
           <div class="form-group">
             <label>Semester <span class="req">*</span></label>
             <select id="att-semester">
@@ -712,8 +718,6 @@
               <option value="7">Sem 7</option><option value="8">Sem 8</option>
             </select>
           </div>
-        </div>
-        <div class="form-row">
           <div class="form-group">
             <label>Branch <span class="req">*</span></label>
             <select id="att-branch">
