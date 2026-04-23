@@ -225,7 +225,7 @@ router.delete('/:id', protect, authorize('teacher'), async (req, res) => {
 });
 
 // @route   GET /api/notes/:id/download
-// @desc    Direct download stream with fail-safe redirect fallback
+// @desc    Direct download stream with pre-authenticated signed URL
 // @access  Private
 router.get('/:id/download', protect, async (req, res) => {
   try {
@@ -250,18 +250,18 @@ router.get('/:id/download', protect, async (req, res) => {
       secure: true
     });
 
-    console.log(`[v7-DeepClean] Streaming attempt: ${note.fileName} (${resourceType})`);
+    console.log(`[v8-Production] Final Download Attempt: ${note.fileName}`);
 
     // Try to stream first
     const client = signedUrl.startsWith('https') ? https : http;
     client.get(signedUrl, { headers: { 'User-Agent': 'College-Portal-Backend/1.0' } }, (proxyRes) => {
-      // If streaming is possible, do it
+      // If streaming is possible (200 OK), do it
       if (proxyRes.statusCode === 200) {
         return streamFile(signedUrl, res, note.fileName);
       } 
       
       // If server-side fetch fails (404/401/etc), redirect the browser to the signed URL directly
-      console.log(`Streaming fetch failed with ${proxyRes.statusCode}, using browser redirect fallback.`);
+      console.log(`Streaming failed with ${proxyRes.statusCode}, using browser redirect.`);
       res.redirect(signedUrl);
     }).on('error', (err) => {
       console.error('Streaming connection error, falling back to redirect:', err);
