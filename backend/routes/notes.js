@@ -302,19 +302,17 @@ router.get('/:id/file', protect, async (req, res) => {
     note.downloadCount += 1;
     await note.save();
 
-    let fileUrl = note.fileUrl;
-    if (fileUrl.includes('cloudinary.com')) {
-      fileUrl = fileUrl.replace('/upload/', '/upload/fl_attachment/');
-    }
-
+    const fileUrl = note.fileUrl;
     res.json({ success: true, url: fileUrl, fileName: note.fileName });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Download failed.' });
   }
 });
 
+const https = require('https');
+
 // @route   GET /api/notes/:id/download
-// @desc    Direct download redirect
+// @desc    Direct download stream
 // @access  Private
 router.get('/:id/download', protect, async (req, res) => {
   try {
@@ -324,14 +322,32 @@ router.get('/:id/download', protect, async (req, res) => {
     note.downloadCount += 1;
     await note.save();
 
-    let fileUrl = note.fileUrl;
-    if (fileUrl.includes('cloudinary.com')) {
-      fileUrl = fileUrl.replace('/upload/', '/upload/fl_attachment/');
-    }
-    
-    res.redirect(fileUrl);
+    const fileUrl = note.fileUrl;
+    const fileName = note.fileName || 'downloaded_file';
+
+    // Set headers to force download
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    // Stream the file from Cloudinary to the client
+    https.get(fileUrl, (proxyRes) => {
+      if (proxyRes.statusCode !== 200) {
+        return res.status(proxyRes.statusCode).send('Error fetching file from storage');
+      }
+      
+      // Transfer content type if available
+      if (proxyRes.headers['content-type']) {
+        res.setHeader('Content-Type', proxyRes.headers['content-type']);
+      }
+      
+      proxyRes.pipe(res);
+    }).on('error', (err) => {
+      console.error('Download stream error:', err);
+      res.status(500).send('Download failed');
+    });
+
   } catch (error) {
-    res.status(500).send('Download failed');
+    console.error('Download error:', error);
+    res.status(500).send('Server error during download');
   }
 });
 
