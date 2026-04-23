@@ -232,6 +232,21 @@ function renderClassReport(records, stats, params) {
   // Stats summary cards
   let statsHtml = '';
   if (stats) {
+    // Medal icons for top performers
+    const medals = ['🥇', '🥈', '🥉', '🏅', '🏅'];
+
+    // Grade distribution bar
+    const gd = stats.gradeDistribution || {};
+    const gradeItems = [
+      { label: 'O', count: gd.O || 0, color: '#16a34a' },
+      { label: 'A+', count: gd['A+'] || 0, color: '#2563eb' },
+      { label: 'A', count: gd.A || 0, color: '#7c3aed' },
+      { label: 'B+', count: gd['B+'] || 0, color: '#d97706' },
+      { label: 'B', count: gd.B || 0, color: '#ea580c' },
+      { label: '<B', count: gd.others || 0, color: '#991b1b' },
+    ];
+    const totalForDist = gradeItems.reduce((s, g) => s + g.count, 0) || 1;
+
     statsHtml = `
     <div class="cr-stats-grid">
       <div class="cr-stat-card"><div class="cr-stat-num">${stats.totalStudents}</div><div class="cr-stat-label">Total Students</div></div>
@@ -241,7 +256,55 @@ function renderClassReport(records, stats, params) {
       <div class="cr-stat-card red"><div class="cr-stat-num">${stats.withBacklogs}</div><div class="cr-stat-label">With Backlogs</div></div>
     </div>
 
-    <div class="cr-section-title">Subject-wise Performance</div>
+    <!-- Grade Distribution Bar -->
+    <div class="cr-section-title">Grade Distribution</div>
+    <div class="grade-dist-section">
+      <div class="grade-dist-bar">
+        ${gradeItems.map(g => g.count > 0 ? `<div class="grade-dist-segment" style="width:${(g.count/totalForDist)*100}%;background:${g.color}" title="${g.label}: ${g.count} students"></div>` : '').join('')}
+      </div>
+      <div class="grade-dist-legend">
+        ${gradeItems.map(g => `<div class="grade-legend-item"><span class="grade-legend-dot" style="background:${g.color}"></span>${g.label} <strong>${g.count}</strong></div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Top Performers -->
+    ${(stats.topPerformers && stats.topPerformers.length) ? `
+    <div class="cr-section-title" style="margin-top:2rem">🏆 Top Performers</div>
+    <div class="toppers-grid">
+      ${stats.topPerformers.map((s, i) => `
+        <div class="topper-card ${i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : ''}">
+          <div class="topper-rank">${medals[i] || '🏅'}</div>
+          <div class="topper-info">
+            <div class="topper-name">${escapeHtml(s.studentName)}</div>
+            <div class="topper-usn">${escapeHtml(s.usn)} · Sec ${s.section}</div>
+          </div>
+          <div class="topper-scores">
+            <div class="topper-cgpa">${s.cgpa.toFixed(2)}</div>
+            <div class="topper-cgpa-label">CGPA</div>
+          </div>
+          <div class="topper-percent">${s.avgPercent}%</div>
+        </div>`).join('')}
+    </div>` : ''}
+
+    <!-- Students Needing Attention -->
+    ${(stats.failingStudents && stats.failingStudents.length) ? `
+    <div class="cr-section-title" style="margin-top:2rem">⚠️ Needs Attention <span style="font-size:0.8rem;font-weight:400;color:var(--text-3)">(${stats.failingStudents.length} student${stats.failingStudents.length > 1 ? 's' : ''} with backlogs)</span></div>
+    <div class="failing-grid">
+      ${stats.failingStudents.map(s => `
+        <div class="failing-card">
+          <div class="failing-info">
+            <div class="failing-name">${escapeHtml(s.studentName)}</div>
+            <div class="failing-usn">${escapeHtml(s.usn)} · Sec ${s.section}</div>
+          </div>
+          <div class="failing-stats">
+            <span class="failing-backlogs">${s.backlogs} backlog${s.backlogs > 1 ? 's' : ''}</span>
+            <span class="failing-cgpa">CGPA: ${s.cgpa.toFixed(2)}</span>
+            <span class="failing-percent">${s.avgPercent}%</span>
+          </div>
+        </div>`).join('')}
+    </div>` : ''}
+
+    <div class="cr-section-title" style="margin-top:2rem">Subject-wise Performance</div>
     <div class="subject-stats-grid">
       ${(stats.subjectStats || []).map(s => `
         <div class="subject-stat-card">

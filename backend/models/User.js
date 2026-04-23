@@ -71,6 +71,15 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // Face recognition data (for attendance)
+    faceDescriptor: {
+      type: [Number], // 128-dimensional face descriptor from face-api.js
+      default: null,
+    },
+    facePhotoUrl: {
+      type: String,
+      default: null,
+    },
     isActive: {
       type: Boolean,
       default: true,

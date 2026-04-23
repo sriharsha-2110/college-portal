@@ -132,11 +132,13 @@ router.get('/me', protect, async (req, res) => {
 // @access  Private
 router.put('/profile', protect, async (req, res) => {
   try {
-    const { name, designation, usn } = req.body;
+    const { name, designation, usn, faceDescriptor, facePhotoUrl } = req.body;
     const updates = {};
     if (name) updates.name = name;
     if (designation && req.user.role === 'teacher') updates.designation = designation;
     if (usn && req.user.role === 'student') updates.usn = usn.toUpperCase();
+    if (faceDescriptor && req.user.role === 'student') updates.faceDescriptor = faceDescriptor;
+    if (facePhotoUrl && req.user.role === 'student') updates.facePhotoUrl = facePhotoUrl;
 
     const user = await User.findByIdAndUpdate(req.user.id, updates, {
       new: true,

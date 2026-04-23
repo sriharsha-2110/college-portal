@@ -289,7 +289,7 @@ router.delete('/:id', protect, authorize('teacher'), async (req, res) => {
   }
 });
 // @route   GET /api/notes/:id/file
-// @desc    Proxy download a note file
+// @desc    Get download URL for a note file
 // @access  Private
 router.get('/:id/file', protect, async (req, res) => {
   try {
@@ -308,8 +308,8 @@ router.get('/:id/file', protect, async (req, res) => {
       fileUrl = fileUrl.replace('/upload/', '/upload/fl_attachment/');
     }
 
-    // Redirect to the Cloudinary URL with download flag
-    res.redirect(fileUrl);
+    // Return the URL as JSON so frontend can trigger download without CORS issues
+    res.json({ success: true, url: fileUrl, fileName: note.fileName });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Download failed.' });
   }

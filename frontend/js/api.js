@@ -100,3 +100,31 @@ const NotesAPI = {
 
   incrementDownload: (id) => apiFetch(`/notes/${id}/download`, { method: 'POST' }),
 };
+
+// Attendance API
+const AttendanceAPI = {
+  save: (payload) =>
+    apiFetch('/attendance', { method: 'POST', body: JSON.stringify(payload) }),
+
+  getClass: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/attendance/class?${qs}`);
+  },
+
+  getMy: () => apiFetch('/attendance/my'),
+
+  getStats: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/attendance/stats?${qs}`);
+  },
+
+  getFaces: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/attendance/faces?${qs}`);
+  },
+
+  update: (id, payload) =>
+    apiFetch(`/attendance/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+
+  delete: (id) => apiFetch(`/attendance/${id}`, { method: 'DELETE' }),
+};

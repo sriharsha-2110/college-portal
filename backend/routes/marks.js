@@ -237,6 +237,33 @@ router.get('/class/stats', protect, authorize('teacher'), async (req, res) => {
       totalStudents: v.total,
     }));
 
+    // Build enriched student list for toppers/failures
+    const enrichedStudents = records.map((r, i) => {
+      const a = analyticsArr[i];
+      return {
+        usn: r.usn,
+        studentName: r.studentName,
+        section: r.section,
+        cgpa: parseFloat(a.cgpa) || 0,
+        avgPercent: a.avgPercent || 0,
+        backlogs: a.backlogs,
+        passedAll: a.passedAll,
+        earnedCredits: a.earnedCredits,
+        totalCredits: a.totalCredits,
+      };
+    });
+
+    // Top 5 performers by CGPA
+    const topPerformers = [...enrichedStudents]
+      .filter(s => s.cgpa > 0)
+      .sort((a, b) => b.cgpa - a.cgpa || b.avgPercent - a.avgPercent)
+      .slice(0, 5);
+
+    // Students with backlogs (sorted by most backlogs first)
+    const failingStudents = enrichedStudents
+      .filter(s => s.backlogs > 0)
+      .sort((a, b) => b.backlogs - a.backlogs || a.avgPercent - b.avgPercent);
+
     res.json({
       success: true,
       stats: {
@@ -254,6 +281,8 @@ router.get('/class/stats', protect, authorize('teacher'), async (req, res) => {
           others: analyticsArr.filter(a => a.avgPercent < 50).length,
         },
         subjectStats,
+        topPerformers,
+        failingStudents,
       },
     });
   } catch (err) {

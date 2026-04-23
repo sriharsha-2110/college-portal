@@ -524,36 +524,35 @@ async function downloadFile(noteId, fileUrl, fileName) {
   try {
     showToast('Starting download...', 'info');
 
-    // Use backend proxy route — avoids CORS issues
+    // Call backend to get the download URL (no CORS issues)
     const proxyUrl = `${API_BASE}/notes/${noteId}/file`;
     const token = Storage.getToken();
 
-    // Fetch the file through the proxy
     const response = await fetch(proxyUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
 
     if (!response.ok) throw new Error('Download failed');
 
-    // Get the file as a blob
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
+    const data = await response.json();
 
-    // Trigger download
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName || 'download';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // Clean up blob URL
-    setTimeout(() => window.URL.revokeObjectURL(url), 5000);
-
-    showToast('Download complete!');
+    if (data.success && data.url) {
+      // Open the Cloudinary download URL directly — fl_attachment forces download
+      const link = document.createElement('a');
+      link.href = data.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.download = data.fileName || fileName || 'download';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Download started!');
+    } else {
+      throw new Error('Invalid response');
+    }
   } catch (err) {
     console.error('Download error:', err);
-    // Fallback — open directly in new tab
+    // Fallback — open the original file URL directly
     window.open(fileUrl, '_blank');
     showToast('Opening file in new tab.', 'info');
   }

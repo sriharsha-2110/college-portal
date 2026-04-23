@@ -81,4 +81,5 @@ function switchView(viewName) {
   if (viewName === 'dashboard') loadDashboardStats();
   if (viewName === 'marks-entry') initMarksForm();
   if (viewName === 'performance') loadPerformance();
+  if (viewName === 'my-attendance') loadMyAttendance();
 }

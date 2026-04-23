@@ -8,10 +8,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1/dist/face-api.js"></script>
 </head>
 <body>
 
-<!-- ===== AUTH PAGES =====4ufsNgo7ttzGwEnC   mongodb://<credentials>@ac-tpnyghl-shard-00-00.jcr1ngc.mongodb.net:27017,ac-tpnyghl-shard-00-01.jcr1ngc.mongodb.net:27017,ac-tpnyghl-shard-00-02.jcr1ngc.mongodb.net:27017/?ssl=true&replicaSet=atlas-rpjoll-shard-0&authSource=admin&appName=Cluster-->
+<!-- ===== AUTH PAGES ===== -->
 <div id="auth-page" class="page active">
   <div class="auth-split">
     <div class="auth-hero">
@@ -210,9 +211,17 @@
         <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Class Report
       </button>
+      <button class="nav-btn teacher-only" data-view="attendance" onclick="switchView('attendance')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Attendance
+      </button>
       <button class="nav-btn student-only" data-view="performance" onclick="switchView('performance')">
         <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Performance
+      </button>
+      <button class="nav-btn student-only" data-view="my-attendance" onclick="switchView('my-attendance')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        My Attendance
       </button>
     </div>
     <div class="nav-right">
@@ -371,7 +380,7 @@
         <div id="ai-gen-body">
           <div class="form-group">
             <label>Describe the topic you want notes on</label>
-            <textarea id="ai-topic" rows="2" placeholder="e.g. Explain Binary Search Trees with insertion and deletion operations for Sem 3 CSE students"></textarea>
+            <textarea id="ai-topic" rows="3" placeholder="Paste your syllabus module/topic here, e.g.:&#10;Module 3: Binary Search Trees - Introduction, Insertion, Deletion, Traversals (Inorder, Preorder, Postorder), AVL Trees, Balancing&#10;&#10;Or simply describe: Explain polymorphism in Java with examples for Sem 3 CSE"></textarea>
           </div>
           <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
             <button class="btn-primary" id="ai-gen-btn" onclick="generateAINotes()">
@@ -640,6 +649,79 @@
     </div>
   </div>
 
+  <!-- ===== ATTENDANCE VIEW (Teacher Only) ===== -->
+  <div id="view-attendance" class="view teacher-only">
+    <div class="view-container">
+      <div class="view-header">
+        <div>
+          <h1>📸 Face Attendance</h1>
+          <p>Upload a class group photo to mark attendance using AI face recognition</p>
+        </div>
+      </div>
+
+      <div class="upload-card">
+        <div class="marks-section-title">Class Details</div>
+        <div class="form-row three">
+          <div class="form-group">
+            <label>Date <span class="req">*</span></label>
+            <input type="date" id="att-date" />
+          </div>
+          <div class="form-group">
+            <label>Subject</label>
+            <input type="text" id="att-subject" placeholder="e.g. Data Structures" />
+          </div>
+          <div class="form-group">
+            <label>Semester <span class="req">*</span></label>
+            <select id="att-semester">
+              <option value="">Select</option>
+              <option value="1">Sem 1</option><option value="2">Sem 2</option>
+              <option value="3">Sem 3</option><option value="4">Sem 4</option>
+              <option value="5">Sem 5</option><option value="6">Sem 6</option>
+              <option value="7">Sem 7</option><option value="8">Sem 8</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Branch <span class="req">*</span></label>
+            <select id="att-branch">
+              <option value="">Select</option>
+              <option value="CSE">CSE</option><option value="ECE">ECE</option>
+              <option value="ME">ME</option><option value="CE">CE</option>
+              <option value="EEE">EEE</option><option value="IT">IT</option>
+              <option value="AIDS">AIDS</option><option value="AIML">AIML</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Section <span class="req">*</span></label>
+            <select id="att-section">
+              <option value="">Select</option>
+              <option value="A">A</option><option value="B">B</option>
+              <option value="C">C</option><option value="D">D</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="marks-section-title" style="margin-top:1.5rem">📸 Upload Class Group Photo</div>
+        <div class="file-drop-zone" onclick="document.getElementById('group-photo-input').click()">
+          <div class="file-drop-icon">📷</div>
+          <div class="file-drop-text">
+            <strong>Click to upload group photo</strong>
+            <span>JPG, PNG • Clear front-facing class photo works best</span>
+          </div>
+          <input type="file" id="group-photo-input" accept="image/*" style="display:none" />
+        </div>
+        <div id="group-photo-status" class="face-reg-status" style="margin-top:0.75rem"></div>
+
+        <button class="btn-primary" style="margin-top:1rem" onclick="processGroupPhoto()">
+          🤖 Detect Faces & Mark Attendance
+        </button>
+
+        <div id="attendance-results" style="margin-top:1.5rem"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== PERFORMANCE VIEW (Student Only) ===== -->
   <div id="view-performance" class="view student-only">
     <div class="view-container">
@@ -658,6 +740,37 @@
 
       <div id="performance-content">
         <div class="loading-state"><div class="loading-dots"><span></span><span></span><span></span></div><p>Loading your marks...</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MY ATTENDANCE VIEW (Student Only) ===== -->
+  <div id="view-my-attendance" class="view student-only">
+    <div class="view-container">
+      <div class="view-header">
+        <div>
+          <h1>📋 My Attendance</h1>
+          <p>Your attendance record across all subjects</p>
+        </div>
+      </div>
+
+      <!-- Face Registration Section -->
+      <div class="upload-card" style="margin-bottom:1.5rem">
+        <div class="marks-section-title">🤳 Register Your Face</div>
+        <p style="font-size:0.85rem;color:var(--text-2);margin-bottom:1rem">Upload a clear front-facing selfie so your teacher can mark your attendance using group photos.</p>
+        <div style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap">
+          <div>
+            <input type="file" id="face-photo-input" accept="image/*" style="margin-bottom:0.5rem" />
+            <button class="btn-primary" onclick="registerFace()">📸 Register Face</button>
+          </div>
+          <img id="face-preview-img" class="hidden" style="width:80px;height:80px;border-radius:12px;object-fit:cover;border:2px solid var(--gold)" />
+        </div>
+        <div id="face-reg-status" class="face-reg-status" style="margin-top:0.75rem"></div>
+        <div id="face-status" style="font-size:0.75rem;color:var(--text-3);margin-top:0.5rem"></div>
+      </div>
+
+      <div id="my-attendance-content">
+        <div class="loading-state"><div class="loading-dots"><span></span><span></span><span></span></div><p>Loading attendance...</p></div>
       </div>
     </div>
   </div>
@@ -737,6 +850,7 @@
 <script src="js/auth.js"></script>
 <script src="js/notes.js"></script>
 <script src="js/marks.js"></script>
+<script src="js/attendance.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
