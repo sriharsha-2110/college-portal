@@ -311,6 +311,7 @@ router.get('/:id/file', protect, async (req, res) => {
 
 const https = require('https');
 const http = require('http');
+const { cloudinary } = require('../config/cloudinary');
 
 // Helper to follow redirects and stream
 const streamFile = (url, res, fileName, retryCount = 0) => {
@@ -372,19 +373,30 @@ router.get('/:id/download', protect, async (req, res) => {
     note.downloadCount += 1;
     await note.save();
 
-    // Sanitize URL: Remove fl_attachment if it was accidentally saved in the URL
-    let fileUrl = note.fileUrl;
-    if (fileUrl.includes('/fl_attachment/')) {
-      fileUrl = fileUrl.replace('/fl_attachment/', '/');
+    // Determine resource type for Cloudinary
+    let resourceType = 'raw';
+    if (note.fileType && (note.fileType.startsWith('image/') || note.fileType === 'application/pdf')) {
+      // Cloudinary treats PDFs as images for transformations/signing sometimes, 
+      // but 'auto' or 'raw' is safer for documents.
+      resourceType = note.fileUrl.includes('/raw/') ? 'raw' : 'image';
     }
 
-    console.log(`Starting download stream for: ${note.fileName}`);
-    console.log(`Fetching from Cloudinary: ${fileUrl}`);
-    streamFile(fileUrl, res, note.fileName || 'file');
+    // Generate a SIGNED URL using the SDK - this fixes the 401 Unauthorized issue
+    // We use the public ID to generate a fresh, authenticated link
+    const signedUrl = cloudinary.url(note.filePublicId, {
+      resource_type: resourceType,
+      sign_url: true,
+      secure: true
+    });
+
+    console.log(`Starting signed download stream for: ${note.fileName}`);
+    console.log(`Signed URL generated successfully.`);
+    
+    streamFile(signedUrl, res, note.fileName || 'file');
 
   } catch (error) {
     console.error('Download error:', error);
-    if (!res.headersSent) res.status(500).send('Server error');
+    if (!res.headersSent) res.status(500).send('Server error during download');
   }
 });
 
