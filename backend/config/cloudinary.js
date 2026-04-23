@@ -13,7 +13,7 @@ const storage = new CloudinaryStorage({
   params: async (req, file) => {
     return {
       folder: `college-portal/notes/${req.body.branch || 'general'}`,
-      resource_type: 'raw',
+      resource_type: 'auto',
       allowed_formats: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'png', 'jpg', 'jpeg'],
       public_id: `${Date.now()}-${file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '')}`,
     };
