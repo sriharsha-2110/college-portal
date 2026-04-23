@@ -372,21 +372,25 @@ router.get('/:id/download', protect, async (req, res) => {
     note.downloadCount += 1;
     await note.save();
 
-    // Determine resource type by checking the stored URL
+    // Determine resource type and version by checking the stored URL
     const fileUrl = note.fileUrl;
     let resourceType = 'raw';
     if (fileUrl.includes('/image/')) resourceType = 'image';
     else if (fileUrl.includes('/video/')) resourceType = 'video';
     else if (fileUrl.includes('/raw/')) resourceType = 'raw';
     
-    console.log(`Detected resource type: ${resourceType} from URL: ${fileUrl}`);
+    const versionMatch = fileUrl.match(/\/v(\d+)\//);
+    const version = versionMatch ? versionMatch[1] : null;
+
+    console.log(`Detected resource type: ${resourceType}, version: ${version} from URL: ${fileUrl}`);
 
     // Generate a SIGNED URL using the SDK - this fixes the 401 Unauthorized issue
     let signedUrl;
     try {
       signedUrl = cloudinary.url(note.filePublicId, {
         resource_type: resourceType,
-        type: 'upload', // explicitly set type
+        type: 'upload',
+        version: version, // provide the correct version
         sign_url: true,
         secure: true
       });
