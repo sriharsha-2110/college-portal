@@ -84,8 +84,8 @@ const NotesAPI = {
   },
 
   getMine: (params = {}) => {
-    const qs = new URLSearchParams(params).toString();
-    return apiFetch(`/notes/my?${qs}`);
+    const qs = new URLSearchParams({ ...params, myNotes: 'true' }).toString();
+    return apiFetch(`/notes?${qs}`);
   },
 
   getStats: () => apiFetch('/notes/stats'),

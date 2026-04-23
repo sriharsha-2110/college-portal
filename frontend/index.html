@@ -659,7 +659,6 @@
     </div>
   </div>
 
-  <!-- ===== ATTENDANCE VIEW (Teacher Only) ===== -->
   <div id="view-attendance" class="view teacher-only">
     <div class="view-container">
       <div class="view-header">
@@ -667,6 +666,29 @@
           <h1>📸 Face Attendance</h1>
           <p>Upload a class group photo to mark attendance using AI face recognition</p>
         </div>
+      </div>
+      <div class="upload-card" style="margin-bottom:1.5rem">
+        <div class="marks-section-title">👤 Student Face Registration</div>
+        <p style="font-size:0.85rem;color:var(--text-2);margin-bottom:1rem">Enter student USN and upload their official photo for face recognition attendance.</p>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Student USN <span class="req">*</span></label>
+            <input type="text" id="t-reg-usn" placeholder="e.g. 1MS21CS001" style="text-transform:uppercase" />
+          </div>
+          <div class="form-group">
+            <label>Official Photo <span class="req">*</span></label>
+            <input type="file" id="t-face-photo-input" accept="image/*" />
+          </div>
+        </div>
+        
+        <div style="display:flex;gap:1rem;align-items:center;margin-top:1rem">
+          <button class="btn-primary" onclick="teacherRegisterFace()">📸 Verify & Register Face</button>
+          <div id="t-face-preview-wrap" class="hidden">
+            <img id="t-face-preview-img" style="width:60px;height:60px;border-radius:12px;object-fit:cover;border:2px solid var(--gold)" />
+          </div>
+        </div>
+        <div id="t-face-reg-status" class="face-reg-status" style="margin-top:0.75rem"></div>
       </div>
 
       <div class="upload-card">
@@ -764,30 +786,7 @@
         </div>
       </div>
 
-      <!-- Teacher: Student Face Registration (Verified) -->
-      <div class="upload-card teacher-only" style="margin-bottom:1.5rem">
-        <div class="marks-section-title">👤 Student Face Registration</div>
-        <p style="font-size:0.85rem;color:var(--text-2);margin-bottom:1rem">Search student by USN and upload their official photo for face recognition attendance.</p>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label>Student USN <span class="req">*</span></label>
-            <input type="text" id="t-reg-usn" placeholder="e.g. 1MS21CS001" style="text-transform:uppercase" />
-          </div>
-          <div class="form-group">
-            <label>Official Photo <span class="req">*</span></label>
-            <input type="file" id="t-face-photo-input" accept="image/*" />
-          </div>
-        </div>
-        
-        <div style="display:flex;gap:1rem;align-items:center;margin-top:1rem">
-          <button class="btn-primary" onclick="teacherRegisterFace()">📸 Verify & Register Face</button>
-          <div id="t-face-preview-wrap" class="hidden">
-            <img id="t-face-preview-img" style="width:50px;height:50px;border-radius:8px;object-fit:cover" />
-          </div>
-        </div>
-        <div id="t-face-reg-status" class="face-reg-status" style="margin-top:0.75rem"></div>
-      </div>
+
 
       <!-- Student: Official Verified Photo -->
       <div class="upload-card student-only" style="margin-bottom:1.5rem" id="student-verified-photo-card">

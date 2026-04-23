@@ -76,7 +76,9 @@ async function loadMyNotes(page = 1) {
     const res = await NotesAPI.getMine({ page, limit: 12 });
     if (res.ok) {
       renderNotesGrid(res.data.notes, 'my-notes-grid', true);
-      renderPagination('my-pagination', res.data.page, res.data.pages, loadMyNotes);
+      renderPagination('my-pagination', res.data.pagination.page, res.data.pagination.pages, loadMyNotes);
+    } else {
+      grid.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><h3>Error</h3><p>${res.data.message}</p></div>`;
     }
   } catch (err) {
     grid.innerHTML = `<div class="empty-state"><div class="empty-icon">📡</div><h3>Connection error</h3></div>`;
