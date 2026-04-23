@@ -3,6 +3,44 @@ const router = express.Router();
 const Note = require('../models/Note');
 const { protect, authorize } = require('../middleware/auth');
 const { upload, cloudinary } = require('../config/cloudinary');
+const https = require('https');
+const http = require('http');
+
+// Universal streaming helper with redirect support
+const streamFile = (url, res, fileName, retryCount = 0) => {
+  if (retryCount > 5) return res.status(500).send('Too many redirects');
+
+  const client = url.startsWith('https') ? https : http;
+  const options = { headers: { 'User-Agent': 'College-Portal-Backend/1.0' } };
+
+  client.get(url, options, (proxyRes) => {
+    // Handle Redirects
+    if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
+      let redirectUrl = proxyRes.headers.location;
+      if (!redirectUrl.startsWith('http')) {
+        const origin = new URL(url).origin;
+        redirectUrl = origin + redirectUrl;
+      }
+      return streamFile(redirectUrl, res, fileName, retryCount + 1);
+    }
+
+    if (proxyRes.statusCode !== 200) {
+      console.error(`Fetch failed: ${proxyRes.statusCode} for ${url}`);
+      return res.status(proxyRes.statusCode).send(`Storage error: ${proxyRes.statusCode}`);
+    }
+
+    // Set headers for download
+    const safeFileName = encodeURIComponent(fileName).replace(/['()]/g, escape).replace(/\*/g, '%2A');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName.replace(/"/g, '')}"; filename*=UTF-8''${safeFileName}`);
+    if (proxyRes.headers['content-type']) res.setHeader('Content-Type', proxyRes.headers['content-type']);
+    if (proxyRes.headers['content-length']) res.setHeader('Content-Length', proxyRes.headers['content-length']);
+    
+    proxyRes.pipe(res);
+  }).on('error', (err) => {
+    console.error('Streaming error:', err);
+    if (!res.headersSent) res.status(500).send('Download failed');
+  });
+};
 
 // @route   POST /api/notes
 // @desc    Upload a note (Teacher only)
@@ -186,45 +224,6 @@ router.delete('/:id', protect, authorize('teacher'), async (req, res) => {
   }
 });
 
-const https = require('https');
-const http = require('http');
-
-// Universal streaming helper with redirect support
-const streamFile = (url, res, fileName, retryCount = 0) => {
-  if (retryCount > 5) return res.status(500).send('Too many redirects');
-
-  const client = url.startsWith('https') ? https : http;
-  const options = { headers: { 'User-Agent': 'College-Portal-Backend/1.0' } };
-
-  client.get(url, options, (proxyRes) => {
-    // Handle Redirects
-    if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
-      let redirectUrl = proxyRes.headers.location;
-      if (!redirectUrl.startsWith('http')) {
-        const origin = new URL(url).origin;
-        redirectUrl = origin + redirectUrl;
-      }
-      return streamFile(redirectUrl, res, fileName, retryCount + 1);
-    }
-
-    if (proxyRes.statusCode !== 200) {
-      console.error(`Fetch failed: ${proxyRes.statusCode} for ${url}`);
-      return res.status(proxyRes.statusCode).send(`Storage error: ${proxyRes.statusCode}`);
-    }
-
-    // Set headers for download
-    const safeFileName = encodeURIComponent(fileName).replace(/['()]/g, escape).replace(/\*/g, '%2A');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName.replace(/"/g, '')}"; filename*=UTF-8''${safeFileName}`);
-    if (proxyRes.headers['content-type']) res.setHeader('Content-Type', proxyRes.headers['content-type']);
-    if (proxyRes.headers['content-length']) res.setHeader('Content-Length', proxyRes.headers['content-length']);
-    
-    proxyRes.pipe(res);
-  }).on('error', (err) => {
-    console.error('Streaming error:', err);
-    if (!res.headersSent) res.status(500).send('Download failed');
-  });
-};
-
 // @route   GET /api/notes/:id/download
 // @desc    Direct download stream with fail-safe redirect fallback
 // @access  Private
@@ -251,23 +250,22 @@ router.get('/:id/download', protect, async (req, res) => {
       secure: true
     });
 
-    console.log(`[v6-Final] Streaming attempt: ${note.fileName} (${resourceType})`);
-    const targetUrl = signedUrl;
+    console.log(`[v7-DeepClean] Streaming attempt: ${note.fileName} (${resourceType})`);
 
     // Try to stream first
-    const client = targetUrl.startsWith('https') ? https : http;
-    client.get(targetUrl, { headers: { 'User-Agent': 'College-Portal-Backend/1.0' } }, (proxyRes) => {
+    const client = signedUrl.startsWith('https') ? https : http;
+    client.get(signedUrl, { headers: { 'User-Agent': 'College-Portal-Backend/1.0' } }, (proxyRes) => {
       // If streaming is possible, do it
       if (proxyRes.statusCode === 200) {
-        return streamFile(targetUrl, res, note.fileName);
+        return streamFile(signedUrl, res, note.fileName);
       } 
       
-      // If server-side fetch fails (404/401/etc), redirect the browser to the file directly
+      // If server-side fetch fails (404/401/etc), redirect the browser to the signed URL directly
       console.log(`Streaming fetch failed with ${proxyRes.statusCode}, using browser redirect fallback.`);
-      res.redirect(targetUrl);
+      res.redirect(signedUrl);
     }).on('error', (err) => {
       console.error('Streaming connection error, falling back to redirect:', err);
-      if (!res.headersSent) res.redirect(targetUrl);
+      if (!res.headersSent) res.redirect(signedUrl);
     });
 
   } catch (error) {
