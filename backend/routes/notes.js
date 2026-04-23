@@ -226,32 +226,31 @@ const streamFile = (url, res, fileName, retryCount = 0) => {
 };
 
 // @route   GET /api/notes/:id/download
-// @desc    Direct download stream with pre-signed URL
+// @desc    Simplified direct download stream
 // @access  Private
 router.get('/:id/download', protect, async (req, res) => {
   try {
     const note = await Note.findById(req.params.id);
     if (!note || !note.isActive) return res.status(404).send('Note not found');
 
+    // Update download count
     note.downloadCount += 1;
     await note.save();
 
-    // Determine the extension (format)
-    const extension = note.fileName.split('.').pop().toLowerCase();
-    
-    // Determine resource type from the stored URL
-    const resourceType = note.fileUrl.includes('/raw/') ? 'raw' : 'image';
+    // Use the original URL from the database
+    let targetUrl = note.fileUrl;
 
-    // Generate the Official Private Download URL
-    // This handles the versioning and pathing internally
-    const signedUrl = cloudinary.utils.private_download_url(note.filePublicId, extension, {
-      resource_type: resourceType,
-      secure: true,
-      attachment: true
-    });
+    // For Images and PDFs, try to force download using Cloudinary's attachment flag
+    // We only do this if it's not a 'raw' file, as raw files don't support fl_attachment
+    if (!targetUrl.includes('fl_attachment') && !targetUrl.includes('/raw/')) {
+       targetUrl = targetUrl.replace('/upload/', '/upload/fl_attachment/');
+    }
 
-    console.log(`Streaming secure download: ${note.fileName} (${resourceType})`);
-    streamFile(signedUrl, res, note.fileName);
+    console.log(`Streaming note: ${note.fileName}`);
+    console.log(`URL: ${targetUrl.substring(0, 70)}...`);
+
+    // Stream the file directly using our robust helper
+    streamFile(targetUrl, res, note.fileName);
 
   } catch (error) {
     console.error('Download route error:', error);
