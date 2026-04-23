@@ -226,7 +226,7 @@ const streamFile = (url, res, fileName, retryCount = 0) => {
 };
 
 // @route   GET /api/notes/:id/download
-// @desc    Direct download stream with auto-fallback
+// @desc    Direct download stream with pre-signed URL
 // @access  Private
 router.get('/:id/download', protect, async (req, res) => {
   try {
@@ -236,45 +236,26 @@ router.get('/:id/download', protect, async (req, res) => {
     note.downloadCount += 1;
     await note.save();
 
-    const versionMatch = note.fileUrl.match(/\/v(\d+)\//);
-    const version = versionMatch ? versionMatch[1] : null;
+    // Determine the extension (format)
+    const extension = note.fileName.split('.').pop().toLowerCase();
+    
+    // Determine resource type from the stored URL
+    const resourceType = note.fileUrl.includes('/raw/') ? 'raw' : 'image';
 
-    // TRY 1: Try as 'image' (Cloudinary's default for many PDFs)
-    let signedUrl = cloudinary.url(note.filePublicId, {
-      resource_type: 'image',
-      type: 'upload',
-      version: version,
-      sign_url: true,
-      secure: true
+    // Generate the Official Private Download URL
+    // This handles the versioning and pathing internally
+    const signedUrl = cloudinary.utils.private_download_url(note.filePublicId, extension, {
+      resource_type: resourceType,
+      secure: true,
+      attachment: true
     });
 
-    console.log(`Attempting download (Image Type): ${note.fileName}`);
-
-    const client = signedUrl.startsWith('https') ? https : http;
-    client.get(signedUrl, { headers: { 'User-Agent': 'College-Portal' } }, (proxyRes) => {
-      if (proxyRes.statusCode === 200) {
-        // Success! Stream it.
-        streamFile(signedUrl, res, note.fileName);
-      } else {
-        // TRY 2: Fallback to 'raw' if image fails
-        console.log(`Image fetch failed (${proxyRes.statusCode}), trying Raw Type...`);
-        const rawUrl = cloudinary.url(note.filePublicId, {
-          resource_type: 'raw',
-          type: 'upload',
-          version: version,
-          sign_url: true,
-          secure: true
-        });
-        streamFile(rawUrl, res, note.fileName);
-      }
-    }).on('error', (err) => {
-      console.error('Initial fetch connection error:', err);
-      if (!res.headersSent) res.status(500).send('Connection error');
-    });
+    console.log(`Streaming secure download: ${note.fileName} (${resourceType})`);
+    streamFile(signedUrl, res, note.fileName);
 
   } catch (error) {
     console.error('Download route error:', error);
-    if (!res.headersSent) res.status(500).send('Server error');
+    if (!res.headersSent) res.status(500).send('Server error during download');
   }
 });
 

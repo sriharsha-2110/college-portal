@@ -14,7 +14,6 @@ const storage = new CloudinaryStorage({
     return {
       folder: `college-portal/notes/${req.body.branch || 'general'}`,
       resource_type: 'auto',
-      allowed_formats: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'png', 'jpg', 'jpeg'],
       public_id: `${Date.now()}-${file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '')}`,
     };
   },
@@ -27,15 +26,22 @@ const fileFilter = (req, file, cb) => {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.ms-powerpoint',
     'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/zip',
+    'application/x-zip-compressed',
     'text/plain',
+    'text/csv',
     'image/png',
     'image/jpeg',
     'image/jpg',
+    'image/gif',
+    'image/webp',
   ];
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only PDF, DOC, DOCX, PPT, PPTX, TXT, PNG, JPG allowed.'), false);
+    cb(new Error('File format not supported. Supported: PDF, DOC, PPT, Excel, ZIP, CSV, Images.'), false);
   }
 };
 
