@@ -372,24 +372,31 @@ router.get('/:id/download', protect, async (req, res) => {
     note.downloadCount += 1;
     await note.save();
 
-    // Determine resource type for Cloudinary
+    // Determine resource type by checking the stored URL
+    const fileUrl = note.fileUrl;
     let resourceType = 'raw';
-    if (note.fileType && (note.fileType.startsWith('image/') || note.fileType === 'application/pdf')) {
-      // Cloudinary treats PDFs as images for transformations/signing sometimes, 
-      // but 'auto' or 'raw' is safer for documents.
-      resourceType = note.fileUrl.includes('/raw/') ? 'raw' : 'image';
-    }
+    if (fileUrl.includes('/image/')) resourceType = 'image';
+    else if (fileUrl.includes('/video/')) resourceType = 'video';
+    else if (fileUrl.includes('/raw/')) resourceType = 'raw';
+    
+    console.log(`Detected resource type: ${resourceType} from URL: ${fileUrl}`);
 
     // Generate a SIGNED URL using the SDK - this fixes the 401 Unauthorized issue
-    // We use the public ID to generate a fresh, authenticated link
-    const signedUrl = cloudinary.url(note.filePublicId, {
-      resource_type: resourceType,
-      sign_url: true,
-      secure: true
-    });
+    let signedUrl;
+    try {
+      signedUrl = cloudinary.url(note.filePublicId, {
+        resource_type: resourceType,
+        type: 'upload', // explicitly set type
+        sign_url: true,
+        secure: true
+      });
+    } catch (urlErr) {
+      console.error('Error generating signed URL:', urlErr);
+      return res.status(500).send('Error generating download link');
+    }
 
     console.log(`Starting signed download stream for: ${note.fileName}`);
-    console.log(`Signed URL generated successfully.`);
+    console.log(`Signed URL: ${signedUrl}`);
     
     streamFile(signedUrl, res, note.fileName || 'file');
 
